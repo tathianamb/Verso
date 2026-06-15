@@ -752,16 +752,25 @@ async function loadLastPdf(){
     toast("PDF não encontrado");
   }
 }
-async function fetchReleasePdf() {
-  // A URL agora é direta no seu GitHub Pages
-  // Substitua 'seu-usuario' e 'seu-repo' pelos seus dados reais
-  const url = `https://seu-usuario.github.io/seu-repo/${pdfName()}`;
+
+async function fetchReleasePdf(){
+  if (!GH.user || !GH.repo) throw new Error("Configurações do GitHub ausentes");
   
-  const response = await fetch(url, { cache: "no-cache" });
-  if (!response.ok) {
-    throw new Error("PDF ainda não disponível na branch gh-pages.");
+  // Constrói a URL direta do arquivo no GitHub Pages do repositório
+  const targetPdf = pdfName();
+  const pagesUrl = `https://${GH.user}.github.io/${GH.repo}/${targetPdf}`;
+
+  // Realiza um fetch simples, sem headers de autorização para não estourar o CORS
+  const r = await fetch(pagesUrl, { 
+    cache: "no-store",
+    method: "GET"
+  });
+  
+  if (!r.ok) {
+    throw new Error(`PDF não encontrado na branch gh-pages (HTTP ${r.status}). Verifique se o Actions já terminou.`);
   }
-  return response.blob();
+  
+  return r.blob();
 }
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
