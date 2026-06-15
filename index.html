@@ -35,45 +35,67 @@
   ::selection{background:var(--sel)}
 
   /* ---------- app shell ---------- */
-  .app{display:grid;grid-template-rows:auto 1fr;height:100%}
+  .app{display:grid;grid-template-rows:auto 1fr;height:100%;height:100dvh}
 
   header.topbar{
-    display:flex;align-items:center;gap:14px;
-    padding:8px 14px;
+    display:flex;align-items:center;gap:10px;
+    padding:8px 12px;
     background:var(--tex-deep);
     color:var(--paper);
     border-bottom:1px solid #06403a;
   }
-  .brand{display:flex;align-items:baseline;gap:9px;user-select:none}
+  .brand{display:flex;align-items:baseline;gap:8px;user-select:none;white-space:nowrap}
   .brand .mark{
     font-family:var(--serif);font-style:italic;font-size:20px;letter-spacing:.3px;
   }
   .brand .mark b{color:#7fd8c6;font-style:normal;font-weight:700}
-  .brand .sub{font-size:11px;color:#8fb3ab;letter-spacing:.16em;text-transform:uppercase}
+  .brand .sub{font-size:10px;color:#8fb3ab;letter-spacing:.14em;text-transform:uppercase}
   .topbar .spacer{flex:1}
+  .actions{display:flex;align-items:center;gap:8px}
   .tbtn{
     background:#11423b;color:var(--paper);border:1px solid #1c5a50;
     padding:7px 13px;border-radius:7px;font-size:13px;font-weight:600;
     display:inline-flex;align-items:center;gap:7px;transition:.15s;
+    white-space:nowrap;
   }
   .tbtn:hover{background:#185d52;border-color:#2a7568}
   .tbtn.primary{background:var(--tex);border-color:#13a48c;color:#fff}
   .tbtn.primary:hover{background:#13a48c}
   .tbtn:disabled{opacity:.5;cursor:not-allowed}
+  .menu-toggle{display:none;font-size:18px;line-height:1;padding:6px 12px}
 
   /* ---------- body columns ---------- */
-  .cols{display:grid;grid-template-columns:240px 1fr 1fr;min-height:0;background:var(--paper)}
+  .cols{
+    display:grid;grid-template-columns:240px 1fr 1fr;
+    min-height:0;height:100%;position:relative;overflow:hidden;
+    background:var(--paper);
+  }
+  .pane{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+  .pane.files{background:var(--paper-2);border-right:1px solid var(--line)}
+  .pane.editor{border-right:1px solid var(--line)}
+
   @media (max-width:880px){
+    /* ações secundárias viram menu suspenso */
+    .menu-toggle{display:inline-flex}
+    .actions{
+      position:absolute;top:52px;right:10px;z-index:40;
+      flex-direction:column;align-items:stretch;gap:6px;
+      background:var(--tex-deep);border:1px solid #1c5a50;border-radius:10px;
+      padding:8px;box-shadow:0 12px 30px rgba(0,0,0,.4);
+      display:none;min-width:180px;
+    }
+    .actions.open{display:flex}
+    .actions .tbtn{justify-content:flex-start;width:100%}
+
+    /* uma coluna por vez, controlada pela tabbar */
     .cols{grid-template-columns:1fr}
-    .pane.files{display:none}
-    .pane.preview{display:none}
-    .cols.show-files .pane.files{display:flex;position:absolute;inset:49px 0 0 0;z-index:20;width:260px}
+    .pane{grid-column:1;grid-row:1}
+    .pane.files,.pane.preview{display:none}
+    .cols.show-files .pane.editor{display:none}
+    .cols.show-files .pane.files{display:flex}
     .cols.show-preview .pane.editor{display:none}
     .cols.show-preview .pane.preview{display:flex}
   }
-  .pane{display:flex;flex-direction:column;min-width:0;min-height:0}
-  .pane.files{background:var(--paper-2);border-right:1px solid var(--line)}
-  .pane.editor{border-right:1px solid var(--line)}
 
   /* ---------- file tree ---------- */
   .files h2,.preview h2{
@@ -138,18 +160,17 @@
   /* ---------- mobile tabbar ---------- */
   .tabbar{display:none}
   @media (max-width:880px){
+    .app{grid-template-rows:auto 1fr auto}
     .tabbar{
-      display:flex;position:fixed;bottom:0;left:0;right:0;z-index:30;
+      display:flex;z-index:30;
       background:var(--tex-deep);border-top:1px solid #06403a;
     }
     .tabbar button{
-      flex:1;background:none;border:0;color:#8fb3ab;padding:10px;font-size:11px;
+      flex:1;background:none;border:0;color:#8fb3ab;padding:9px;font-size:11px;
       display:flex;flex-direction:column;align-items:center;gap:3px;font-weight:600;
     }
     .tabbar button.active{color:#7fd8c6}
     .tabbar button .ti{font-size:16px}
-    .editor-wrap{padding-bottom:54px}
-    .tree{padding-bottom:54px}
   }
 
   .toast{
@@ -159,7 +180,7 @@
     box-shadow:0 8px 26px rgba(0,0,0,.3);
   }
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-  @media (max-width:880px){.toast{bottom:66px}}
+  @media (max-width:880px){.toast{bottom:72px}}
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -169,22 +190,28 @@
   <header class="topbar">
     <div class="brand">
       <span class="mark"><b>V</b>erso</span>
-      <span class="sub">tese · UTFPR-PG</span>
+      <span class="sub">editor LaTeX</span>
     </div>
     <div class="spacer"></div>
-    <button class="tbtn" id="btnImport" title="Abrir um .zip local (alternativa)">Abrir .zip</button>
-    <button class="tbtn" id="btnExport" title="Baixar projeto .zip">Exportar</button>
-    <button class="tbtn" id="btnRepo" title="Conectar repositório do GitHub">Repo</button>
-    <button class="tbtn" id="btnPull" title="Carregar a tese do seu repositório">Puxar do GitHub</button>
-    <button class="tbtn" id="btnSave" title="Salvar no dispositivo (Ctrl+S)">Salvar</button>
-    <button class="tbtn primary" id="btnPublish" title="Publicar e compilar (Ctrl+Enter)">Publicar &amp; compilar</button>
+    <!-- ações secundárias: viram menu no mobile -->
+    <div class="actions" id="actions">
+      <button class="tbtn" id="btnPull" title="Carregar a tese do seu repositório">Puxar do GitHub</button>
+      <button class="tbtn" id="btnRepo" title="Conectar repositório do GitHub">Repo</button>
+      <button class="tbtn" id="btnSave" title="Salvar no dispositivo (Ctrl+S)">Salvar</button>
+      <button class="tbtn" id="btnImport" title="Abrir um .zip local (alternativa)">Abrir .zip</button>
+      <button class="tbtn" id="btnExport" title="Baixar projeto .zip">Exportar .zip</button>
+    </div>
+    <!-- ação principal: sempre visível -->
+    <button class="tbtn primary" id="btnPublish" title="Publicar e compilar (Ctrl+Enter)">Publicar</button>
+    <!-- botão de menu: só aparece no mobile -->
+    <button class="tbtn menu-toggle" id="btnMenu" title="Mais ações" aria-label="Mais ações">⋯</button>
     <input type="file" id="zipInput" accept=".zip" style="display:none">
   </header>
 
   <div class="cols" id="cols">
     <!-- file tree -->
     <aside class="pane files">
-      <h2>Arquivos da tese</h2>
+      <h2>Arquivos</h2>
       <div class="tree" id="tree"></div>
     </aside>
 
@@ -211,13 +238,13 @@
       <div id="log"></div>
     </section>
   </div>
-</div>
 
-<nav class="tabbar">
-  <button data-tab="files"><span class="ti">☰</span>Arquivos</button>
-  <button data-tab="editor" class="active"><span class="ti">✎</span>Editor</button>
-  <button data-tab="preview"><span class="ti">▤</span>PDF</button>
-</nav>
+  <nav class="tabbar">
+    <button data-tab="files"><span class="ti">☰</span>Arquivos</button>
+    <button data-tab="editor" class="active"><span class="ti">✎</span>Editor</button>
+    <button data-tab="preview"><span class="ti">▤</span>PDF</button>
+  </nav>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -712,14 +739,24 @@ function switchTab(name){
   document.querySelectorAll(".tabbar button").forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
   const c=$("#cols");c.classList.toggle("show-files",name==="files");
   c.classList.toggle("show-preview",name==="preview");
+  if(name==="editor")setTimeout(()=>cm.refresh(),0);
 }
 document.querySelectorAll(".tabbar button").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
-$("#btnSave").onclick=saveAll;
+
+/* menu suspenso de ações (mobile) */
+const actionsEl=$("#actions");
+function closeMenu(){actionsEl.classList.remove("open");}
+$("#btnMenu").onclick=e=>{e.stopPropagation();actionsEl.classList.toggle("open");};
+document.addEventListener("click",e=>{
+  if(actionsEl.classList.contains("open")&&!actionsEl.contains(e.target)&&e.target.id!=="btnMenu")closeMenu();
+});
+
+$("#btnSave").onclick=()=>{closeMenu();saveAll();};
 $("#btnPublish").onclick=publish;
-$("#btnExport").onclick=exportZip;
-$("#btnImport").onclick=()=>$("#zipInput").click();
-$("#btnRepo").onclick=configRepo;
-$("#btnPull").onclick=pullFromGitHub;
+$("#btnExport").onclick=()=>{closeMenu();exportZip();};
+$("#btnImport").onclick=()=>{closeMenu();$("#zipInput").click();};
+$("#btnRepo").onclick=()=>{closeMenu();configRepo();};
+$("#btnPull").onclick=()=>{closeMenu();pullFromGitHub();};
 $("#zipInput").onchange=e=>{const f=e.target.files[0];if(f)importZip(f).catch(err=>{console.error(err);toast("Erro ao ler zip");});e.target.value="";};
 document.addEventListener("keydown",e=>{
   if((e.ctrlKey||e.metaKey)&&e.key==="s"){e.preventDefault();saveAll();}
@@ -742,7 +779,7 @@ if("serviceWorker"in navigator){
   navigator.serviceWorker.register(url).catch(()=>{});
 }
 
-load();
+load().then(()=>setTimeout(()=>cm.refresh(),60));
 </script>
 </body>
 </html>
