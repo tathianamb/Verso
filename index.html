@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Verso — editor de tese LaTeX</title>
+<title>Verso — editor LaTeX</title>
 <meta name="theme-color" content="#0f2e2a" />
-<link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlZlcnNvIOKAlCBlZGl0b3IgZGUgdGVzZSBMYVRlWCIsCiAgInNob3J0X25hbWUiOiAiVmVyc28iLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzBmMmUyYSIsCiAgInRoZW1lX2NvbG9yIjogIiMwZjJlMmEiCn0=" />
+<link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlZlcnNvIOKAlCBlZGl0b3IgTGFUZVgiLAogICJzaG9ydF9uYW1lIjogIlZlcnNvIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMwZjJlMmEiLAogICJ0aGVtZV9jb2xvciI6ICIjMGYyZTJhIgp9" />
 <style>
   /* ---------- design tokens ---------- */
   :root{
@@ -128,15 +128,15 @@
   .editor-wrap{flex:1;min-height:0;overflow:hidden;background:#fbfaf5}
   .CodeMirror{height:100%!important;font-family:var(--mono);font-size:13.5px;line-height:1.65}
   .CodeMirror-gutters{background:#f1ece0;border-right:1px solid var(--line)}
-  .cm-s-tese.CodeMirror{background:#fbfaf5;color:#26302c}
-  .cm-s-tese .CodeMirror-cursor{border-left:2px solid var(--tex)}
-  .cm-s-tese .CodeMirror-selected{background:var(--sel)!important}
-  .cm-s-tese .CodeMirror-linenumber{color:#b3a988}
-  .cm-s-tese .cm-tex-cmd{color:var(--tex);font-weight:600}
-  .cm-s-tese .cm-tex-brace{color:#9a7b2e}
-  .cm-s-tese .cm-tex-math{color:#7a3ea8}
-  .cm-s-tese .cm-tex-comment{color:#9c947f;font-style:italic}
-  .cm-s-tese .cm-tex-env{color:#b5641e;font-weight:600}
+  .cm-s-verso.CodeMirror{background:#fbfaf5;color:#26302c}
+  .cm-s-verso .CodeMirror-cursor{border-left:2px solid var(--tex)}
+  .cm-s-verso .CodeMirror-selected{background:var(--sel)!important}
+  .cm-s-verso .CodeMirror-linenumber{color:#b3a988}
+  .cm-s-verso .cm-tex-cmd{color:var(--tex);font-weight:600}
+  .cm-s-verso .cm-tex-brace{color:#9a7b2e}
+  .cm-s-verso .cm-tex-math{color:#7a3ea8}
+  .cm-s-verso .cm-tex-comment{color:#9c947f;font-style:italic}
+  .cm-s-verso .cm-tex-env{color:#b5641e;font-weight:600}
 
   /* ---------- preview ---------- */
   .pane.preview{background:#dad3c2}
@@ -195,7 +195,7 @@
     <div class="spacer"></div>
     <!-- ações secundárias: viram menu no mobile -->
     <div class="actions" id="actions">
-      <button class="tbtn" id="btnPull" title="Carregar a tese do seu repositório">Puxar do GitHub</button>
+      <button class="tbtn" id="btnPull" title="Carregar o projeto do seu repositório">Puxar do GitHub</button>
       <button class="tbtn" id="btnRepo" title="Conectar repositório do GitHub">Repo</button>
       <button class="tbtn" id="btnSave" title="Salvar no dispositivo (Ctrl+S)">Salvar</button>
       <button class="tbtn" id="btnImport" title="Abrir um .zip local (alternativa)">Abrir .zip</button>
@@ -229,8 +229,8 @@
       <h2>Saída — PDF</h2>
       <div class="ph" id="previewPh">
         <div class="big">Escreva. Publique. Veja.</div>
-        <div>Edite à esquerda e clique <code>Publicar &amp; compilar</code>.<br>
-        O app commita no seu GitHub, o Actions compila (abnTeX2, biber, EPS)<br>
+        <div>Edite à esquerda e clique <code>Publicar</code>.<br>
+        O app commita no seu GitHub, o Actions compila com TeX Live<br>
         e o PDF aparece aqui — sem zip, sem upload manual.</div>
         <div>Primeira vez? Clique em <code>Repo</code> pra conectar seu repositório.</div>
       </div>
@@ -252,9 +252,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/stex/stex.min.js"></script>
 <script>
 /* ============================================================
-   Verso — editor de tese LaTeX (PWA)
+   Verso — editor LaTeX (PWA)
    - Edição offline com persistência em IndexedDB
-   - Árvore de arquivos baseada na estrutura real da tese
+   - Árvore de arquivos baseada na estrutura do projeto
    - Gancho de compilação (endpoint remoto OU instruções de CI)
    ============================================================ */
 
@@ -262,30 +262,33 @@
 /* App genérico: nada seu fica embutido. Token e tese vivem só no seu
    navegador. Use "Repo" + "Puxar do GitHub" pra carregar do repo privado. */
 const SEED = {
-  "LEIA-ME.txt": `Bem-vindo ao Verso — editor de tese LaTeX.
+  "LEIA-ME.txt": `Bem-vindo ao Verso — editor LaTeX.
 
-Este app é genérico: funciona com qualquer repositório.
-Nada fica embutido nele — seu token e sua tese ficam só
-aqui no seu navegador (IndexedDB).
+Funciona com qualquer projeto LaTeX (artigo, relatório,
+tese, currículo...). Nada fica embutido no app: seu token
+e seus arquivos ficam só aqui no navegador (IndexedDB).
 
 PRIMEIROS PASSOS
-1. "Repo": conecte seu repositório PRIVADO do GitHub
+1. "Repo": conecte seu repositório do GitHub
    (usuário, repo, branch e um token de acesso).
-2. "Puxar do GitHub": carrega a tese que já está no repo
-   (main.tex, capítulos, refs.bib, .cls, imagens, EPS).
-3. Edite à vontade. "Publicar & compilar" commita as
-   mudanças, o Actions compila e o PDF aparece no preview.
+2. "Puxar do GitHub": carrega os arquivos que já estão
+   no repo (.tex, .bib, .cls/.sty, imagens, etc.).
+3. Edite à vontade. "Publicar" commita as mudanças,
+   o GitHub Actions compila e o PDF aparece no preview.
+
+O arquivo-raiz é detectado automaticamente pelo
+\\documentclass — não precisa se chamar main.tex.
 
 Alternativa offline: "Abrir .zip" carrega de um arquivo
 local em vez do GitHub.
 
-Dica: o app marca em âmbar qualquer arquivo que o main.tex
-referencia via \\input mas que não existe (ex.: diag-causal).`,
+Dica: o app destaca em âmbar qualquer arquivo que um
+\\input referencie mas que ainda não exista.`,
 };
 
 /* arquivos que o main.tex referencia via \\input mas podem faltar.
-   Recalculado dinamicamente ao abrir o zip. */
-let REFERENCED = ["chapters/diag-causal.tex"];
+   Começa vazio e é recalculado a partir do main.tex real carregado. */
+let REFERENCED = [];
 
 /* extensões tratadas como texto editável; o resto vira binário (base64) */
 const TEXT_EXT=/\.(tex|bib|cls|sty|txt|md|cfg|lco|bst|ltx|gitignore)$/i;
@@ -311,12 +314,29 @@ async function dbAll(){const d=await idb();return new Promise((res,rej)=>{
 let files={};          // path -> texto (arquivos editáveis)
 let binaries={};       // path -> base64 (imagens, eps, etc.)
 let current=null;      // active path
+let rootTex=null;      // arquivo-raiz detectado (contém \documentclass)
 let dirty=false;
 const $=s=>document.querySelector(s);
 
+/* detecta o arquivo-raiz: o .tex que contém \documentclass.
+   Se houver vários, prefere um chamado main.tex; senão, o primeiro. */
+function detectRoot(){
+  const texs=Object.keys(files).filter(p=>p.endsWith(".tex"));
+  const withClass=texs.filter(p=>/\\documentclass/.test(files[p]));
+  if(withClass.length){
+    rootTex=withClass.includes("main.tex")?"main.tex":withClass.sort()[0];
+  }else{
+    // sem \documentclass visível: cai pro main.tex ou primeiro .tex
+    rootTex=files["main.tex"]?"main.tex":(texs.sort()[0]||null);
+  }
+  return rootTex;
+}
+/* nome do PDF derivado do raiz: cv.tex -> cv.pdf */
+function pdfName(){return rootTex?rootTex.replace(/\.tex$/,"").split("/").pop()+".pdf":"output.pdf";}
+
 /* ---------- 4. CodeMirror ---------- */
 const cm=CodeMirror.fromTextArea($("#code"),{
-  mode:"stex",theme:"tese",lineNumbers:true,lineWrapping:true,
+  mode:"stex",theme:"verso",lineNumbers:true,lineWrapping:true,
   autofocus:true,viewportMargin:Infinity,
 });
 cm.on("change",()=>{if(current){files[current]=cm.getValue();setDirty(true);}});
@@ -327,10 +347,16 @@ function setDirty(v){dirty=v;$("#dirtyDot").classList.toggle("on",v);}
 function basename(p){return p.split("/").pop();}
 function buildTree(){
   const tree=$("#tree");tree.innerHTML="";
-  const root=[],chap=[];
-  Object.keys(files).forEach(p=>{(p.includes("/")?chap:root).push(p);});
-  // also surface referenced-but-missing
-  REFERENCED.forEach(p=>{if(!(p in files))chap.push(p);});
+  // agrupa por pasta de topo real (raiz + cada subpasta)
+  const groups={};            // folder -> [paths]
+  const ROOT="\u0000raiz";    // chave especial pra raiz (ordena primeiro)
+  const add=(p)=>{
+    const folder=p.includes("/")?p.slice(0,p.indexOf("/")):ROOT;
+    (groups[folder]||(groups[folder]=[])).push(p);
+  };
+  Object.keys(files).forEach(add);
+  // arquivos referenciados pelo main mas ausentes
+  REFERENCED.forEach(p=>{if(!(p in files))add(p);});
 
   const addItem=(p)=>{
     const missing=!(p in files);
@@ -339,13 +365,19 @@ function buildTree(){
     const ext=p.endsWith(".bib")?"❡":p.endsWith(".tex")?"§":"·";
     el.innerHTML=`<span class="ic">${missing?"!":ext}</span><span>${basename(p)}</span>`+
       (missing?`<small>ausente</small>`:``);
-    el.onclick=()=>{ if(missing){ if(confirm(`Criar ${p}? O main.tex faz \\input dele, mas o arquivo não existe.`)){ files[p]="% "+p+"\n\\chapter{Novo capítulo}\n"; openFile(p); buildTree(); setDirty(true);} return;} openFile(p); };
+    el.onclick=()=>{ if(missing){ if(confirm(`Criar ${p}? Um \\input aponta para ele, mas o arquivo não existe.`)){ files[p]="% "+p+"\n"; openFile(p); buildTree(); setDirty(true);} return;} openFile(p); };
     tree.appendChild(el);
   };
-  if(root.length){const g=document.createElement("div");g.className="grp";g.textContent="raiz";tree.appendChild(g);
-    root.sort().forEach(addItem);}
-  if(chap.length){const g=document.createElement("div");g.className="grp";g.textContent="chapters/";tree.appendChild(g);
-    chap.sort().forEach(addItem);}
+
+  // raiz primeiro, depois as pastas em ordem alfabética
+  const order=Object.keys(groups).sort((a,b)=>{
+    if(a===ROOT)return -1;if(b===ROOT)return 1;return a.localeCompare(b);});
+  for(const folder of order){
+    const g=document.createElement("div");g.className="grp";
+    g.textContent=folder===ROOT?"raiz":folder+"/";
+    tree.appendChild(g);
+    groups[folder].sort().forEach(addItem);
+  }
 }
 function openFile(p){
   if(!(p in files))return;
@@ -392,15 +424,16 @@ async function load(){
     files={...SEED};await persistEverything();
   }
   rescanReferenced();buildTree();
-  openFile(files["main.tex"]?"main.tex":Object.keys(files)[0]);
+  openFile(rootTex||Object.keys(files)[0]);
 }
 
 /* ---------- 7. publicar no GitHub: commit → Actions → PDF ---------- */
 /* Um clique: commita os arquivos alterados via API do GitHub, monitora
    o workflow do Actions e, ao concluir, carrega o PDF da Release no
    preview. Token e config ficam só no dispositivo (IndexedDB). */
-const GH_TAG="ultimo-pdf";        // tag da Release publicada pelo tese.yml
-const GH_ASSET="main.pdf";        // nome do PDF publicado
+const GH_TAG="ultimo-pdf";        // tag da Release publicada pelo workflow (verso.yml)
+/* o PDF publicado tem o nome do arquivo-raiz (ex.: main.pdf, cv.pdf).
+   Derivado dinamicamente via pdfName(); a busca abaixo também tem fallback. */
 const GH_BRANCH="main";           // branch alvo dos commits
 const GH_API="https://api.github.com";
 let GH={user:"",repo:"",token:"",branch:GH_BRANCH};
@@ -477,7 +510,7 @@ async function commitAll(onProgress){
   if(!treeR.ok)throw new Error("tree: HTTP "+treeR.status);
   const treeSha=(await treeR.json()).sha;
   // 4) commit
-  const msg="Verso: atualiza a tese ("+new Date().toLocaleString("pt-BR")+")";
+  const msg="Verso: atualiza o projeto ("+new Date().toLocaleString("pt-BR")+")";
   const commitBody={message:msg,tree:treeSha};
   if(parentSha)commitBody.parents=[parentSha];
   const commitR=await gh(`${base}/commits`,{method:"POST",body:JSON.stringify(commitBody)});
@@ -506,7 +539,7 @@ async function publish(){
     logLine("  • usuário/organização e nome do repositório;");
     logLine("  • um token de acesso (fine-grained, escopo Contents + Actions).");
     logLine("");
-    logLine("O token fica só neste dispositivo. Use um token restrito ao repo da tese.","warn");
+    logLine("O token fica só neste dispositivo. Use um token restrito a este repositório.","warn");
     toast("Conecte o repo em \"Repo\"");
     return;
   }
@@ -573,13 +606,13 @@ async function monitorRun(commitSha){
     const url=URL.createObjectURL(blob);
     $("#previewPh").style.display="none";const f=$("#pdfframe");f.style.display="block";f.src=url;
     logLine("PDF pronto e carregado no preview. ✓","ok");
-    notify("Tese compilada ✓","Seu PDF está pronto e já apareceu no preview.");
+    notify("PDF pronto ✓","A compilação terminou e o PDF apareceu no preview.");
     toast("PDF pronto");
     if(window.innerWidth<=880)switchTab("preview");
   }catch(e){
     logLine("Compilou, mas não baixei o PDF: "+e.message,"warn");
     logLine("Confira a Release \""+GH_TAG+"\" no repositório.","warn");
-    notify("Tese compilada","O PDF foi gerado; abra a Release pra ver.");
+    notify("Compilação concluída","O PDF foi gerado; abra a Release pra ver.");
   }
 }
 
@@ -589,7 +622,10 @@ async function fetchReleasePdf(){
   const relR=await gh(`/repos/${GH.user}/${GH.repo}/releases/tags/${GH_TAG}`);
   if(!relR.ok)throw new Error("Release \""+GH_TAG+"\" não encontrada (HTTP "+relR.status+")");
   const rel=await relR.json();
-  const asset=(rel.assets||[]).find(a=>a.name===GH_ASSET)||(rel.assets||[])[0];
+  const wanted=pdfName();
+  const asset=(rel.assets||[]).find(a=>a.name===wanted)
+            ||(rel.assets||[]).find(a=>a.name.endsWith(".pdf"))
+            ||(rel.assets||[])[0];
   if(!asset)throw new Error("a Release não tem o PDF anexado ainda");
   // o download autenticado do asset usa Accept: application/octet-stream
   const dl=await fetch(GH_API+`/repos/${GH.user}/${GH.repo}/releases/assets/${asset.id}`,{
@@ -612,7 +648,7 @@ function notify(title,body){
 function configRepo(){
   const u=prompt("Usuário ou organização do GitHub:",GH.user);
   if(u===null)return;
-  const r=prompt("Nome do repositório da tese:",GH.repo);
+  const r=prompt("Nome do repositório:",GH.repo);
   if(r===null)return;
   const b=prompt("Branch (normalmente main):",GH.branch||"main");
   if(b===null)return;
@@ -628,13 +664,18 @@ function configRepo(){
 /* lê o main.tex e descobre quais capítulos ele referencia,
    marcando como "ausente" os que não existem no projeto. */
 function rescanReferenced(){
-  const main=files["main.tex"];if(!main)return;
+  detectRoot();
+  const root=rootTex&&files[rootTex];
+  if(!root){REFERENCED=[];buildTree();return;}
+  const dir=rootTex.includes("/")?rootTex.slice(0,rootTex.lastIndexOf("/")+1):"";
   const refs=new Set();
   const re=/\\(?:input|include)\{([^}]+)\}/g;let m;
-  while((m=re.exec(main))){
+  while((m=re.exec(root))){
     let p=m[1].trim();
     if(!/\.\w+$/.test(p))p+=".tex";          // \input sem extensão -> .tex
-    refs.add(p);
+    // resolve relativo à pasta do arquivo-raiz, se não for caminho absoluto
+    if(dir && !p.startsWith("/") && !(p in files))p=dir+p;
+    refs.add(p.replace(/^\//,""));
   }
   REFERENCED=[...refs];
   buildTree();
@@ -646,7 +687,7 @@ async function importZip(file){
   toast("Lendo "+file.name+"…");
   const zip=await JSZip.loadAsync(file);
   const newText={},newBin={};
-  // detecta prefixo de pasta comum (ex.: "tese-latex-master/")
+  // detecta prefixo de pasta comum (ex.: "projeto-main/")
   const paths=Object.keys(zip.files).filter(p=>!zip.files[p].dir);
   let prefix="";
   const top=paths[0]?.split("/")[0];
@@ -665,14 +706,13 @@ async function importZip(file){
   files=newText;binaries=newBin;
   await persistEverything();
   rescanReferenced();
-  // abre o main.tex se existir, senão o primeiro .tex
-  const first=files["main.tex"]?"main.tex":Object.keys(files).find(p=>p.endsWith(".tex"))||Object.keys(files)[0];
-  openFile(first);
+  // abre o arquivo-raiz detectado (\documentclass), senão o primeiro .tex
+  openFile(rootTex||Object.keys(files).find(p=>p.endsWith(".tex"))||Object.keys(files)[0]);
   setDirty(false);
   toast(Object.keys(files).length+" arquivos + "+Object.keys(binaries).length+" recursos carregados");
 }
 
-/* ---------- 7c-bis. puxar a tese do GitHub (repo privado) ---------- */
+/* ---------- 7c-bis. puxar o projeto do GitHub ---------- */
 /* lê a árvore completa do branch via Git Trees API (recursiva) e baixa
    cada blob. Funciona em repo privado porque usa o token. */
 async function pullFromGitHub(){
@@ -693,7 +733,7 @@ async function pullFromGitHub(){
     if(!tR.ok)throw new Error("árvore: HTTP "+tR.status);
     const tree=(await tR.json()).tree.filter(n=>n.type==="blob");
 
-    // ignora o próprio app e o workflow ao carregar a tese
+    // ignora o próprio app e o workflow ao carregar o projeto
     const skip=p=>p==="index.html"||p.startsWith(".github/")||p===".gitignore";
     const newText={},newBin={};let done=0;
     const blobs=tree.filter(n=>!skip(n.path));
@@ -708,9 +748,9 @@ async function pullFromGitHub(){
     if(!Object.keys(newText).length)throw new Error("nenhum arquivo de texto encontrado no repo");
     files=newText;binaries=newBin;
     await persistEverything();rescanReferenced();
-    openFile(files["main.tex"]?"main.tex":Object.keys(files)[0]);
+    openFile(rootTex||Object.keys(files)[0]);
     setDirty(false);
-    logLine("Tese carregada do GitHub. ✓","ok");
+    logLine("Projeto carregado do GitHub. ✓","ok");
     toast(Object.keys(files).length+" arquivos + "+Object.keys(binaries).length+" recursos");
   }catch(e){
     logLine("Falha ao puxar do GitHub: "+e.message,"err");
@@ -728,7 +768,7 @@ async function exportZip(){
   for(const[p,v]of Object.entries(binaries))zip.file(p,v,{base64:true});
   const blob=await zip.generateAsync({type:"blob"});
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);
-  a.download="tese-latex.zip";a.click();
+  a.download="projeto-latex.zip";a.click();
   toast("Projeto exportado (.zip)");
 }
 
