@@ -317,6 +317,9 @@
               <span class="arr"></span>
             </button>
             <div class="dd-menu" id="ghMenu">
+              <div class="dd-label">Projeto · <span id="projName">—</span></div>
+              <button class="dd-item" id="btnProjects"><i data-lucide="folders"></i>Projetos…</button>
+              <div class="dd-sep"></div>
               <div class="dd-label">GitHub</div>
               <button class="dd-item dd-sub" id="btnPull"><i data-lucide="git-branch"></i>Clone</button>
               <button class="dd-item dd-sub" id="btnPush"><i data-lucide="git-pull-request-arrow"></i>Push</button>
@@ -433,10 +436,17 @@ const TEXT_EXT=/\.(tex|bib|cls|sty|txt|md|cfg|lco|bst|ltx|gitignore)$/i;
 const isText=p=>TEXT_EXT.test(p)||(/(^|\/)\.[^/]+$/.test(p)&&!/\.(jpg|jpeg|png|gif|pdf|eps|ttf|otf)$/i.test(p));
 
 /* ---------- 2. IndexedDB ---------- */
-const DB="lavoura",STORE="files";
-function idb(){return new Promise((res,rej)=>{const r=indexedDB.open(DB,1);
+/* ---------- 2. IndexedDB (por projeto) + meta (global) ---------- */
+const STORE="files";
+/* nome do DB do projeto atual; trocado ao alternar de projeto */
+let curDbName="verso_proj_default";
+function sanitizeKey(s){return (s||"default").replace(/[^A-Za-z0-9_-]/g,"_");}
+function setProjectDb(repo){ curDbName="verso_proj_"+sanitizeKey(repo); }
+
+function openDb(name){return new Promise((res,rej)=>{const r=indexedDB.open(name,1);
   r.onupgradeneeded=()=>r.result.createObjectStore(STORE);
   r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+function idb(){return openDb(curDbName);}
 async function dbGet(k){const d=await idb();return new Promise((res,rej)=>{
   const t=d.transaction(STORE).objectStore(STORE).get(k);
   t.onsuccess=()=>res(t.result);t.onerror=()=>rej(t.error);});}
@@ -447,6 +457,15 @@ async function dbAll(){const d=await idb();return new Promise((res,rej)=>{
   const out={},s=d.transaction(STORE).objectStore(STORE),c=s.openCursor();
   c.onsuccess=e=>{const cur=e.target.result;if(cur){out[cur.key]=cur.value;cur.continue();}else res(out);};
   c.onerror=()=>rej(c.error);});}
+
+/* meta DB global: lista de projetos, projeto atual, URL do servidor */
+const META_DB="verso_meta";
+async function metaGet(k){const d=await openDb(META_DB);return new Promise((res,rej)=>{
+  const t=d.transaction(STORE).objectStore(STORE).get(k);
+  t.onsuccess=()=>res(t.result);t.onerror=()=>rej(t.error);});}
+async function metaSet(k,v){const d=await openDb(META_DB);return new Promise((res,rej)=>{
+  const t=d.transaction(STORE,"readwrite").objectStore(STORE).put(v,k);
+  t.onsuccess=()=>res();t.onerror=()=>rej(t.error);});}
 
 /* ---------- 3. estado ---------- */
 let files={};
@@ -532,7 +551,7 @@ function openFile(p){
   if(window.innerWidth<=880)switchTab("editor");
 }
 
-/* ---------- 6. persistência ---------- */
+/* ---------- 6. persistência (no DB do projeto atual) ---------- */
 async function persistEverything(){
   const d=await idb();
   await new Promise((res,rej)=>{
@@ -540,7 +559,6 @@ async function persistEverything(){
     s.clear();
     for(const[k,v]of Object.entries(files))s.put(v,k);
     for(const[k,v]of Object.entries(binaries))s.put(v,"bin::"+k);
-    if(GHcfg.server)s.put(GHcfg.server,"__server_url");
     t.oncomplete=()=>res();t.onerror=()=>rej(t.error);
   });
 }
@@ -549,19 +567,20 @@ async function saveAll(){
   setDirty(false);toast("Salvo no dispositivo");
 }
 async function load(){
+  // aponta o DB pro projeto atual (ou default se nenhum)
+  setProjectDb(currentProject?currentProject.repo:"default");
   const stored=await dbAll();
   files={};binaries={};
-  GHcfg={server:stored["__server_url"]||""};
-  ["__server_url","__gh_user","__gh_repo","__gh_token","__gh_branch"].forEach(k=>delete stored[k]);
-  if(Object.keys(stored).length){
-    for(const[k,v]of Object.entries(stored)){
-      if(k.startsWith("bin::"))binaries[k.slice(5)]=v;else files[k]=v;
-    }
-  }else{
+  for(const[k,v]of Object.entries(stored)){
+    if(k.startsWith("__"))continue;            // chaves internas
+    if(k.startsWith("bin::"))binaries[k.slice(5)]=v;else files[k]=v;
+  }
+  if(!Object.keys(files).length){
     files={...SEED};await persistEverything();
   }
   rescanReferenced();buildTree();
   openFile(rootTex||Object.keys(files)[0]);
+  updateProjectUI();
 }
 
 /* ---------- 7. Backend (Cloud Run) + Firebase Auth ---------- */
@@ -610,11 +629,29 @@ function showPdfBlob(blob){
 /* endpoint do servidor; cai pra valor salvo se SERVER_URL estiver vazio */
 function serverUrl(){return SERVER_URL||GHcfg.server||"";}
 let GHcfg={server:""};
-function setServer(u){GHcfg.server=u;dbSet("__server_url",u);}
+function setServer(u){GHcfg.server=u;metaSet("server_url",u);}
+
+/* ----- registro de projetos (global, na meta DB) ----- */
+/* cada projeto: {name, repo, branch}. 'repo' pode ser 'nome' (usa owner do server) ou 'owner/nome'. */
+let projects=[];           // lista de projetos cadastrados
+let currentProject=null;   // {name, repo, branch}
+
+async function loadProjects(){
+  projects=(await metaGet("projects"))||[];
+  const curName=await metaGet("current_project");
+  currentProject=projects.find(p=>p.name===curName)||projects[0]||null;
+}
+async function saveProjects(){
+  await metaSet("projects", projects);
+  await metaSet("current_project", currentProject?currentProject.name:"");
+}
+function projectRepo(){ return currentProject?currentProject.repo:""; }
+function projectBranch(){ return (currentProject&&currentProject.branch)||"main"; }
 
 /* garante que há servidor e login antes de chamar a API */
 async function ensureReady(){
-  if(!serverUrl()){toast("Configure o servidor primeiro");logLine("Defina a URL do servidor em \"Servidor\".","err");return null;}
+  if(!serverUrl()){toast("Configure o servidor primeiro");logLine("Defina a URL do servidor em \"Configurar servidor\".","err");return null;}
+  if(!currentProject){toast("Cadastre/selecione um projeto");logLine("Use \"Projetos\" pra cadastrar e escolher um projeto.","err");return null;}
   if(!authUser||!getIdToken){toast("Faça login com Google");logLine("Clique em \"Entrar\" pra logar com Google.","err");return null;}
   try{return await getIdToken();}
   catch(e){logLine("Não consegui obter o token de login: "+e.message,"err");return null;}
@@ -636,7 +673,7 @@ async function compileOnly(){
     const r=await fetch(serverUrl().replace(/\/$/,"")+"/compile",{
       method:"POST",
       headers:{"Content-Type":"application/json","Authorization":"Bearer "+jwt},
-      body:JSON.stringify({files,binaries}),
+      body:JSON.stringify({files,binaries,repo:projectRepo(),branch:projectBranch()}),
     });
     if(!r.ok){
       let msg="HTTP "+r.status;
@@ -680,7 +717,7 @@ async function pushToGitHub(){
     const r=await fetch(serverUrl().replace(/\/$/,"")+"/push",{
       method:"POST",
       headers:{"Content-Type":"application/json","Authorization":"Bearer "+jwt},
-      body:JSON.stringify({files,binaries}),
+      body:JSON.stringify({files,binaries,repo:projectRepo(),branch:projectBranch()}),
     });
     const j=await r.json().catch(()=>({}));
     if(!r.ok && !j.source){throw new Error(j.error||("HTTP "+r.status));}
@@ -710,7 +747,7 @@ async function pullFromGitHub(){
     const r=await fetch(serverUrl().replace(/\/$/,"")+"/pull",{
       method:"POST",
       headers:{"Content-Type":"application/json","Authorization":"Bearer "+jwt},
-      body:JSON.stringify({}),
+      body:JSON.stringify({repo:projectRepo(),branch:projectBranch()}),
     });
     if(!r.ok){let msg="HTTP "+r.status;try{const j=await r.json();if(j.error)msg=j.error;}catch(_){}throw new Error(msg);}
     const j=await r.json();
@@ -733,6 +770,73 @@ function configRepo(){
   if(u===null)return;
   setServer(u.trim().replace(/\/$/,""));
   toast(u.trim()?("Servidor: "+u.trim()):"Servidor limpo");
+}
+
+/* ============================================================
+   GERENCIAMENTO DE PROJETOS (multi-repo)
+   ============================================================ */
+function updateProjectUI(){
+  const el=$("#projName");
+  if(el)el.textContent=currentProject?currentProject.name:"sem projeto";
+}
+
+/* cadastra um novo projeto */
+async function addProject(){
+  const name=(prompt("Nome do projeto (como vai aparecer na lista):","")||"").trim();
+  if(!name)return;
+  const repo=(prompt("Repositório no GitHub (só o nome, ex.: tese-latex):\n(ou 'owner/repo' se for de outra conta)","")||"").trim();
+  if(!repo)return;
+  const branch=(prompt("Branch (normalmente main):","main")||"main").trim()||"main";
+  if(projects.some(p=>p.name===name)){toast("Já existe um projeto com esse nome");return;}
+  projects.push({name,repo,branch});
+  currentProject={name,repo,branch};
+  await saveProjects();
+  await switchProject(currentProject,true);
+  toast("Projeto adicionado: "+name);
+}
+
+/* troca o projeto atual (salva o aberto, carrega o do destino) */
+async function switchProject(proj,skipSave){
+  if(!proj)return;
+  if(!skipSave && currentProject && dirty){ try{await persistEverything();}catch(_){}}
+  currentProject=proj;
+  await saveProjects();
+  await load();                       // load() já aponta o DB pro projeto certo
+  setDirty(false);
+  updateProjectUI();
+  logLine("Projeto atual: "+proj.name+" ("+proj.repo+" / "+(proj.branch||"main")+")","ok");
+  toast("Projeto: "+proj.name);
+}
+
+/* menu de projetos: escolher, adicionar ou remover */
+async function manageProjects(){
+  if(reviewMode){toast("Revisores não trocam de projeto");return;}
+  if(!projects.length){ await addProject(); return; }
+  const lista=projects.map((p,i)=>`${i+1}) ${p.name}  [${p.repo}/${p.branch||"main"}]`).join("\n");
+  const escolha=prompt(
+    "PROJETOS\n"+lista+"\n\n"+
+    "Digite o NÚMERO para abrir,\n'+' para adicionar novo,\n'-N' para remover (ex.: -2).",
+    currentProject?String(projects.indexOf(currentProject)+1):"1");
+  if(escolha===null)return;
+  const v=escolha.trim();
+  if(v==="+"){ await addProject(); return; }
+  if(v.startsWith("-")){
+    const idx=parseInt(v.slice(1),10)-1;
+    if(projects[idx]){
+      const rem=projects[idx];
+      if(confirm("Remover o projeto \""+rem.name+"\" da lista? (os arquivos locais dele são apagados)")){
+        try{ indexedDB.deleteDatabase("verso_proj_"+sanitizeKey(rem.repo)); }catch(_){}
+        projects.splice(idx,1);
+        if(currentProject===rem)currentProject=projects[0]||null;
+        await saveProjects();
+        if(currentProject)await switchProject(currentProject,true); else { updateProjectUI(); }
+        toast("Projeto removido");
+      }
+    }
+    return;
+  }
+  const idx=parseInt(v,10)-1;
+  if(projects[idx])await switchProject(projects[idx]);
 }
 
 /* ============================================================
@@ -1005,6 +1109,7 @@ $("#btnLogin").onclick=()=>{closeAllDropdowns();toggleLogin();};
 $("#btnExport").onclick=()=>{closeAllDropdowns();exportZip();};
 $("#btnImport").onclick=()=>{closeAllDropdowns();$("#zipInput").click();};
 $("#btnRepo").onclick=()=>{closeAllDropdowns();configRepo();};
+$("#btnProjects").onclick=()=>{closeAllDropdowns();manageProjects();};
 $("#btnPull").onclick=()=>{closeAllDropdowns();pullFromGitHub();};
 $("#zipInput").onchange=e=>{const f=e.target.files[0];if(f)importZip(f).catch(err=>{console.error(err);toast("Erro ao ler zip");});e.target.value="";};
 
@@ -1157,10 +1262,14 @@ async function boot(){
   initFirebase();
   initFirestore();
   renderIcons();
+  // carrega config global (servidor + lista de projetos) da meta DB
+  try{ GHcfg={server:(await metaGet("server_url"))||""}; }catch(_){}
+  try{ await loadProjects(); }catch(_){}
   // se é um link de revisor (#p/<id>), entra em modo revisor em vez do projeto local
   let entered=false;
   try{ entered=await maybeEnterReviewMode(); }catch(_){}
   if(!entered){ await load(); }
+  updateProjectUI();
   setTimeout(()=>{cm.refresh();renderIcons();},60);
 }
 boot();
