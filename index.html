@@ -21,6 +21,7 @@
     --mono:"SFMono-Regular",ui-monospace,"JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;
     --serif:"Iowan Old Style","Palatino Linotype","Book Antiqua",Palatino,Georgia,serif;
     --sans:ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --head-h:50px;   /* altura compartilhada dos cabeçalhos das colunas */
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%}
@@ -63,7 +64,13 @@
   }
   .dd-item:hover{background:#11423b}
   .dd-item .di{font-size:13px;width:16px;text-align:center}
+  .dd-item svg{width:15px;height:15px;flex-shrink:0;opacity:.85}
   .dd-sep{height:1px;background:#1c5a50;margin:3px 0}
+  .dd-label{
+    font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+    color:#6f968c;font-weight:700;padding:6px 11px 3px;user-select:none;
+  }
+  .dd-sub{padding-left:22px}
 
   /* ---------- body columns ---------- */
   .cols{
@@ -86,11 +93,11 @@
 
   /* ---------- file pane: header with actions + tree ---------- */
   .files-header{
-    padding:10px 10px 8px;
+    padding:8px 10px;
     border-bottom:1px solid #06403a;
     background:var(--tex-deep);
-    display:flex;flex-direction:column;gap:7px;
-    flex-shrink:0;
+    display:flex;flex-direction:column;justify-content:center;gap:6px;
+    flex-shrink:0;min-height:var(--head-h);box-sizing:border-box;
   }
   .files-brand{
     display:flex;align-items:baseline;gap:7px;user-select:none;
@@ -100,6 +107,11 @@
   }
   .files-brand .mark b{color:#7fd8c6;font-style:normal;font-weight:700}
   .files-brand .sub{font-size:9px;color:#8fb3ab;letter-spacing:.13em;text-transform:uppercase}
+  .review-badge{
+    font-size:9px;font-weight:700;letter-spacing:.04em;color:#fff;
+    background:var(--amber);padding:2px 7px;border-radius:999px;
+    align-items:center;display:inline-flex;
+  }
   .files-actions{display:flex;gap:10px;align-items:center;padding:4px 0 2px}
 
   /* icon buttons — large circular SVG style */
@@ -114,6 +126,17 @@
   .ibtn:active{background:rgba(255,255,255,.16)}
   .ibtn:disabled{opacity:.25;cursor:not-allowed}
   .ibtn svg{width:26px;height:26px;display:block}
+  /* ícones compostos: base + ação no canto inferior direito */
+  .ic-stack{position:relative;width:26px;height:26px;display:inline-flex}
+  .ic-stack > svg{width:26px;height:26px}
+  .ic-stack .ic-badge{
+    position:absolute;right:-5px;bottom:-4px;
+    width:15px;height:15px;border-radius:50%;
+    background:var(--tex-deep);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .ic-stack .ic-badge svg{width:11px;height:11px;stroke-width:2.6}
+  .ic-stack.ic-zip .ic-badge{right:-8.5px;bottom:-3px}   /* pastas zip: deslocadas */
 
   /* dd trigger as icon button inside files pane */
   .files-header .dd-trigger{
@@ -126,6 +149,7 @@
   .files-header .dd-trigger:hover{opacity:1;background:rgba(255,255,255,.1)}
   .files-header .dd-trigger svg{width:26px;height:26px;display:block}
   .files-header .dd-trigger .arr{display:none}
+  .gh-logo{width:23px;height:23px;display:block}
 
   /* ---------- file tree ---------- */
   .tree{overflow:auto;flex:1;padding:6px 0}
@@ -143,10 +167,11 @@
 
   /* ---------- editor header ---------- */
   .ed-head{
-    display:flex;align-items:center;gap:10px;padding:7px 12px;
+    display:none;align-items:center;gap:10px;padding:7px 12px;
     border-bottom:1px solid #06403a;background:var(--tex-deep);
     flex-shrink:0;
   }
+  @media (max-width:880px){ .ed-head{display:flex} }
   .crumb{font-family:var(--mono);font-size:12px;color:#8fb3ab;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .crumb b{color:#fff}
   .dot{width:7px;height:7px;border-radius:50%;background:var(--amber);opacity:0;flex-shrink:0}
@@ -165,12 +190,22 @@
   .cm-s-verso .cm-tex-env{color:#b5641e;font-weight:600}
 
   /* ---------- preview ---------- */
-  .pane.preview{background:#dad3c2;display:flex;flex-direction:column}
+  .pane.preview{background:#dad3c2;display:flex;flex-direction:column;position:relative}
   .preview-head{
-    display:flex;align-items:center;gap:8px;padding:7px 12px;
+    display:flex;align-items:center;gap:8px;padding:4px 10px;
     border-bottom:1px solid #06403a;background:var(--tex-deep);flex-shrink:0;
+    min-height:var(--head-h);box-sizing:border-box;
   }
   .preview-title{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:#8fb3ab;font-weight:700;flex:1}
+  /* botão de compilar como tag arredondada */
+  .pdf-tag{
+    background:var(--tex);color:#fff;border:1px solid #13a48c;
+    font-size:12px;font-weight:700;letter-spacing:.04em;
+    padding:5px 14px;border-radius:999px;transition:.13s;white-space:nowrap;
+  }
+  .pdf-tag:hover{background:#13a48c}
+  .pdf-tag:active{transform:translateY(1px)}
+  .pdf-tag:disabled{opacity:.5;cursor:not-allowed}
   .pbtn{
     background:#b8b0a0;color:var(--ink);border:1px solid #a8a090;
     padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;
@@ -197,14 +232,18 @@
   .preview .ph code{font-family:var(--mono);font-size:12px;background:#cfc8b5;padding:2px 6px;border-radius:4px}
   .pdfframe{flex:1;border:0;width:100%;background:#cfc8b5;min-height:0}
 
-  /* ---------- log (collapsible) ---------- */
+  /* ---------- log (overlay opaco sobre o PDF) ---------- */
   #log{
+    position:absolute;left:0;right:0;bottom:0;
+    top:var(--head-h);                /* começa logo abaixo do cabeçalho */
     font-family:var(--mono);font-size:11.5px;line-height:1.5;color:#2c3531;
-    background:#efe9db;border-top:1px solid var(--line);
-    padding:10px 14px;height:0;overflow:auto;white-space:pre-wrap;
-    transition:height .2s ease;flex-shrink:0;
+    background:#efe9db;               /* opaco: cobre o PDF */
+    padding:12px 14px;overflow:auto;white-space:pre-wrap;
+    transform:translateY(100%);       /* escondido: deslizado pra baixo */
+    transition:transform .2s ease;
+    z-index:5;border-top:1px solid var(--line);
   }
-  #log.open{height:200px}
+  #log.open{transform:translateY(0)}
   #log .err{color:#a3331b}
   #log .ok{color:#1d6b4f}
   #log .warn{color:#9a6411}
@@ -230,7 +269,8 @@
       display:flex;flex-direction:column;align-items:center;gap:3px;font-weight:600;
     }
     .tabbar button.active{color:#7fd8c6}
-    .tabbar button .ti{font-size:16px}
+    .tabbar button .ti{font-size:16px;display:inline-flex}
+    .tabbar button .ti svg{width:19px;height:19px}
     .cols{grid-template-columns:1fr}
     .pane{grid-column:1;grid-row:1}
     .pane.files,.pane.preview{display:none}
@@ -252,6 +292,10 @@
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
 <div class="app">
@@ -263,38 +307,38 @@
         <div class="files-brand">
           <span class="mark"><b>V</b>erso</span>
           <span class="sub">editor LaTeX</span>
+          <span class="review-badge" id="reviewBadge" style="display:none"></span>
         </div>
         <div class="files-actions">
           <!-- GitHub dropdown icon -->
           <div class="dd-wrap" id="ghWrap">
-            <button class="dd-trigger" id="btnGhDrop" title="GitHub">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
-              </svg>
+            <button class="dd-trigger" id="btnGhDrop" title="Conta e GitHub">
+              <i data-lucide="circle-user"></i>
               <span class="arr"></span>
             </button>
             <div class="dd-menu" id="ghMenu">
-              <button class="dd-item" id="btnRepo"><span class="di">🔗</span>Conectar GitHub</button>
-              <button class="dd-item" id="btnPull"><span class="di">⬇</span>Sincronizar</button>
+              <div class="dd-label">GitHub</div>
+              <button class="dd-item dd-sub" id="btnPull"><i data-lucide="git-branch"></i>Clone</button>
+              <button class="dd-item dd-sub" id="btnPush"><i data-lucide="git-pull-request-arrow"></i>Push</button>
+              <div class="dd-sep"></div>
+              <button class="dd-item" id="btnShare"><i data-lucide="share-2"></i>Compartilhar</button>
+              <button class="dd-item" id="btnRepo"><i data-lucide="settings"></i>Configurar servidor</button>
+              <button class="dd-item" id="btnLogin"><i data-lucide="log-in"></i>Entrar com Google</button>
             </div>
           </div>
-          <!-- Importar ZIP -->
+          <!-- Importar ZIP: folder-archive + arrow-up-to-line -->
           <button class="ibtn" id="btnImport" title="Importar .zip">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="12" y1="18" x2="12" y2="12"/>
-              <polyline points="9 15 12 18 15 15"/>
-            </svg>
+            <span class="ic-stack ic-zip">
+              <i data-lucide="folder-archive"></i>
+              <span class="ic-badge"><i data-lucide="arrow-up-to-line"></i></span>
+            </span>
           </button>
-          <!-- Exportar ZIP -->
+          <!-- Exportar ZIP: folder-archive + arrow-down-to-line -->
           <button class="ibtn" id="btnExport" title="Exportar .zip">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="12" y1="12" x2="12" y2="18"/>
-              <polyline points="9 15 12 12 15 15"/>
-            </svg>
+            <span class="ic-stack ic-zip">
+              <i data-lucide="folder-archive"></i>
+              <span class="ic-badge"><i data-lucide="arrow-down-to-line"></i></span>
+            </span>
           </button>
 
         </div>
@@ -320,29 +364,26 @@
     <!-- ===== COLUNA 3: PDF Preview ===== -->
     <section class="pane preview">
       <div class="preview-head">
-        <span class="preview-title">PDF</span>
-        <!-- Log toggle -->
+        <!-- ESQUERDA: compilar (tag) + console lado a lado -->
+        <button class="pdf-tag" id="btnCompile" title="Compilar PDF (Ctrl+Enter)">▶ PDF</button>
         <button class="log-toggle" id="btnLog" title="Mostrar/ocultar console">
           Console <span class="lt-arrow">▲</span>
         </button>
-        <!-- Compilar PDF dropdown -->
-        <div class="dd-wrap" id="compileWrap">
-          <button class="dd-trigger preview-head" id="btnCompileDrop" title="Compilar PDF (Ctrl+Enter)" style="background:var(--tex);color:#fff;border-color:#13a48c">
-            ▶ Compilar PDF <span class="arr">▾</span>
-          </button>
-          <div class="dd-menu" id="compileMenu" style="left:auto;right:0">
-            <button class="dd-item" id="btnPublish"><span class="di">🚀</span>Compilar e publicar</button>
-            <div class="dd-sep"></div>
-            <button class="dd-item" id="btnLoadPdf"><span class="di">📄</span>Carregar último PDF</button>
-          </div>
-        </div>
+        <span style="flex:1"></span>
+        <!-- DIREITA: baixar o PDF — file-text + download -->
+        <button class="ibtn" id="btnDownload" title="Baixar o PDF" disabled>
+          <span class="ic-stack">
+            <i data-lucide="file-text"></i>
+            <span class="ic-badge"><i data-lucide="download"></i></span>
+          </span>
+        </button>
       </div>
       <div class="ph" id="previewPh">
         <div class="big">Escreva. Compile. Veja.</div>
-        <div>Edite à esquerda e clique <code>Compilar PDF</code>.<br>
-        O app commita no GitHub, o Actions compila com TeX Live<br>
-        e o PDF aparece aqui — sem upload manual.</div>
-        <div>Primeira vez? Use <code>GitHub → Conectar GitHub</code>.</div>
+        <div>Edite à esquerda e clique <code>▶ PDF</code>.<br>
+        O servidor compila com TeX Live e devolve o PDF na hora —<br>
+        sem espera, sem polling. A fonte é versionada no GitHub.</div>
+        <div>Primeira vez? Entre com Google e configure o servidor no menu do GitHub.</div>
       </div>
       <iframe class="pdfframe" id="pdfframe" style="display:none"></iframe>
       <div id="log"></div>
@@ -350,9 +391,9 @@
   </div>
 
   <nav class="tabbar">
-    <button data-tab="files"><span class="ti">☰</span>Arquivos</button>
-    <button data-tab="editor" class="active"><span class="ti">✎</span>Editor</button>
-    <button data-tab="preview"><span class="ti">▤</span>PDF</button>
+    <button data-tab="files"><span class="ti"><i data-lucide="folder"></i></span>Arquivos</button>
+    <button data-tab="editor" class="active"><span class="ti"><i data-lucide="pen-line"></i></span>Editor</button>
+    <button data-tab="preview"><span class="ti"><i data-lucide="file-text"></i></span>PDF</button>
   </nav>
 </div>
 
@@ -499,10 +540,7 @@ async function persistEverything(){
     s.clear();
     for(const[k,v]of Object.entries(files))s.put(v,k);
     for(const[k,v]of Object.entries(binaries))s.put(v,"bin::"+k);
-    if(GH.user)s.put(GH.user,"__gh_user");
-    if(GH.repo)s.put(GH.repo,"__gh_repo");
-    if(GH.token)s.put(GH.token,"__gh_token");
-    if(GH.branch)s.put(GH.branch,"__gh_branch");
+    if(GHcfg.server)s.put(GHcfg.server,"__server_url");
     t.oncomplete=()=>res();t.onerror=()=>rej(t.error);
   });
 }
@@ -513,10 +551,8 @@ async function saveAll(){
 async function load(){
   const stored=await dbAll();
   files={};binaries={};
-  GH={user:stored["__gh_user"]||"",repo:stored["__gh_repo"]||"",
-      token:stored["__gh_token"]||"",branch:stored["__gh_branch"]||"main"};
-  delete stored["__gh_user"];delete stored["__gh_repo"];
-  delete stored["__gh_token"];delete stored["__gh_branch"];
+  GHcfg={server:stored["__server_url"]||""};
+  ["__server_url","__gh_user","__gh_repo","__gh_token","__gh_branch"].forEach(k=>delete stored[k]);
   if(Object.keys(stored).length){
     for(const[k,v]of Object.entries(stored)){
       if(k.startsWith("bin::"))binaries[k.slice(5)]=v;else files[k]=v;
@@ -526,34 +562,26 @@ async function load(){
   }
   rescanReferenced();buildTree();
   openFile(rootTex||Object.keys(files)[0]);
-  /* ao carregar, tenta mostrar o último PDF gerado */
-  tryLoadLastPdf();
 }
 
-/* ---------- 7. GitHub ---------- */
-const GH_TAG="ultimo-pdf";
-const GH_BRANCH="main";
-const GH_API="https://api.github.com";
-let GH={user:"",repo:"",token:"",branch:GH_BRANCH};
-let lastPushedSha={};
+/* ---------- 7. Backend (Cloud Run) + Firebase Auth ---------- */
+/* O servidor compila com TeX Live e devolve o PDF na resposta,
+   além de versionar no GitHub (token fica só no servidor).
+   O navegador só faz: login Google → manda arquivos → recebe PDF. */
+const SERVER_URL = "";   // ex.: "https://verso-xxxxx.run.app"  (configurável via "Servidor")
 
-function setGhCfg(o){GH={...GH,...o};
-  dbSet("__gh_user",GH.user);dbSet("__gh_repo",GH.repo);
-  dbSet("__gh_token",GH.token);dbSet("__gh_branch",GH.branch);}
+/* estado de auth */
+let authUser=null;       // {email, name} quando logado
+let getIdToken=null;     // função async que devolve o JWT atual
 
 /* --- log collapsible --- */
 function logLine(msg,cls){
   const l=$("#log");
   const s=document.createElement("div");if(cls)s.className=cls;s.textContent=msg;l.appendChild(s);l.scrollTop=l.scrollHeight;
-  /* abre automaticamente se fechado */
-  if(!l.classList.contains("open")){
-    l.classList.add("open");
-    $("#btnLog").classList.add("log-open");
-  }
+  if(!l.classList.contains("open")){l.classList.add("open");$("#btnLog").classList.add("log-open");}
 }
 function clearLog(){$("#log").innerHTML="";}
 
-/* checagem local */
 function preflight(){
   const missing=REFERENCED.filter(p=>!(p in files));
   if(missing.length){
@@ -562,219 +590,6 @@ function preflight(){
     logLine("");
   }
   return missing.length===0;
-}
-
-/* helper de API */
-async function gh(path,opts={}){
-  const r=await fetch(GH_API+path,{...opts,headers:{
-    "Authorization":"Bearer "+GH.token,
-    "Accept":"application/vnd.github+json",
-    "X-GitHub-Api-Version":"2022-11-28",
-    ...(opts.headers||{})}});
-  return r;
-}
-
-function b64encodeText(str){return btoa(unescape(encodeURIComponent(str)));}
-
-async function makeBlob(contentB64){
-  const r=await gh(`/repos/${GH.user}/${GH.repo}/git/blobs`,
-    {method:"POST",body:JSON.stringify({content:contentB64,encoding:"base64"})});
-  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error("blob: "+(e.message||r.status));}
-  return (await r.json()).sha;
-}
-
-async function commitAll(onProgress){
-  const base=`/repos/${GH.user}/${GH.repo}/git`;
-  let parentSha=null,baseTree=null;
-  const refR=await gh(`${base}/ref/heads/${GH.branch}`);
-  if(refR.ok){
-    parentSha=(await refR.json()).object.sha;
-    const commitR=await gh(`${base}/commits/${parentSha}`);
-    if(commitR.ok)baseTree=(await commitR.json()).tree.sha;
-  }else if(refR.status!==404){
-    throw new Error("ref: HTTP "+refR.status);
-  }
-  const entries=[];
-  const all=[...Object.keys(files).map(p=>[p,b64encodeText(files[p])]),
-             ...Object.keys(binaries).map(p=>[p,binaries[p]])];
-  let done=0;
-  for(const [path,b64] of all){
-    const sha=await makeBlob(b64);
-    entries.push({path,mode:"100644",type:"blob",sha});
-    done++;onProgress&&onProgress(done,all.length,path);
-  }
-  const treeBody={tree:entries};if(baseTree)treeBody.base_tree=baseTree;
-  const treeR=await gh(`${base}/trees`,{method:"POST",body:JSON.stringify(treeBody)});
-  if(!treeR.ok)throw new Error("tree: HTTP "+treeR.status);
-  const treeSha=(await treeR.json()).sha;
-  const msg="Verso: atualiza o projeto ("+new Date().toLocaleString("pt-BR")+")";
-  const commitBody={message:msg,tree:treeSha};
-  if(parentSha)commitBody.parents=[parentSha];
-  const commitR=await gh(`${base}/commits`,{method:"POST",body:JSON.stringify(commitBody)});
-  if(!commitR.ok)throw new Error("commit: HTTP "+commitR.status);
-  const newCommit=(await commitR.json()).sha;
-  let updR=await gh(`${base}/refs/heads/${GH.branch}`,
-    {method:"PATCH",body:JSON.stringify({sha:newCommit,force:false})});
-  if(updR.status===404||updR.status===422){
-    updR=await gh(`${base}/refs`,
-      {method:"POST",body:JSON.stringify({ref:`refs/heads/${GH.branch}`,sha:newCommit})});
-  }
-  if(!updR.ok){const e=await updR.json().catch(()=>({}));throw new Error("push: "+(e.message||updR.status));}
-  return newCommit;
-}
-
-/* fluxo principal: compilar PDF */
-async function publish(){
-  clearLog();
-  if(!GH.user||!GH.repo||!GH.token){
-    $("#previewPh").style.display="flex";$("#pdfframe").style.display="none";
-    logLine("Conecte o GitHub primeiro (GitHub → Conectar GitHub).","err");
-    logLine("");
-    logLine("Informe: usuário, repositório, branch e token (Contents + Actions).","warn");
-    toast("Conecte o GitHub primeiro");
-    return;
-  }
-  if(!preflight()){toast("Há \\input ausentes");return;}
-  $("#btnPublish").disabled=true;
-  try{
-    const total=Object.keys(files).length+Object.keys(binaries).length;
-    logLine("Publicando "+total+" arquivos em "+GH.user+"/"+GH.repo+" ("+GH.branch+")…");
-    const commitSha=await commitAll((d,t,p)=>{
-      if(d===1||d===t||d%5===0)logLine("  enviando… ("+d+"/"+t+")");
-    });
-    logLine("Commit "+commitSha.slice(0,7)+" publicado. Aguardando compilação…","ok");
-    await monitorRun(commitSha);
-  }catch(e){
-    logLine("Falha ao publicar: "+e.message,"err");
-    if(/401|403|Bad credentials|Resource not accessible/i.test(e.message))
-      logLine("Verifique o token (Contents: read/write e Actions: read).","warn");
-    toast("Erro ao compilar");
-  }finally{$("#btnPublish").disabled=false;}
-}
-
-async function monitorRun(commitSha){
-  logLine("Aguardando o GitHub Actions iniciar…");
-  let runId=null,runNum=null,tries=0;
-  while(!runId&&tries<20){
-    await sleep(3000);tries++;
-    const r=await gh(`/repos/${GH.user}/${GH.repo}/actions/runs?branch=${GH.branch}&per_page=10`);
-    if(r.ok){const j=await r.json();
-      const run=(j.workflow_runs||[]).find(w=>!commitSha||w.head_sha===commitSha)
-                ||(j.workflow_runs||[])[0];
-      if(run&&(!commitSha||run.head_sha===commitSha)){
-        runId=run.id;runNum=run.run_number;
-        logLine("Run #"+runNum+" detectado…");
-      }
-    }
-  }
-  if(!runId){logLine("Run não detectado. Veja em github.com/"+GH.user+"/"+GH.repo+"/actions","warn");
-    toast("Run do Actions não encontrado");return;}
-
-  let status="queued",conclusion=null;
-  while(status!=="completed"){
-    await sleep(5000);
-    const r=await gh(`/repos/${GH.user}/${GH.repo}/actions/runs/${runId}`);
-    if(!r.ok){logLine("Erro ao consultar o run: HTTP "+r.status,"err");break;}
-    const j=await r.json();status=j.status;conclusion=j.conclusion;
-    logLine("  status: "+status+(conclusion?(" → "+conclusion):""));
-  }
-
-  if(conclusion!=="success"){
-    logLine("Compilação falhou ("+conclusion+").","err");
-    logLine("Log: github.com/"+GH.user+"/"+GH.repo+"/actions/runs/"+runId,"warn");
-    notify("Compilação falhou","Actions terminou com: "+conclusion);
-    toast("Compilação falhou");
-    return;
-  }
-
-  logLine("Compilação concluída. Carregando PDF…","ok");
-  await sleep(2500);
-  try{
-    const blob=await fetchReleasePdf();
-    showPdfBlob(blob);
-    logLine("PDF carregado no preview. ✓","ok");
-    notify("PDF pronto ✓","Compilação concluída.");
-    toast("PDF pronto");
-    if(window.innerWidth<=880)switchTab("preview");
-  }catch(e){
-    logLine("Compilou, mas não foi possível baixar o PDF automaticamente.","warn");
-    logLine("Acesse: github.com/"+GH.user+"/"+GH.repo+"/releases/tag/"+GH_TAG,"warn");
-    notify("Compilação concluída","Abra a Release para baixar o PDF.");
-  }
-}
-
-function showPdfBlob(blob){
-  const url=URL.createObjectURL(blob);
-  $("#previewPh").style.display="none";
-  const f=$("#pdfframe");f.style.display="block";f.src=url;
-}
-
-/* ---------- 7b. carregar último PDF (sem recompilar) ---------- */
-/* Busca o PDF da última Action concluída com sucesso, independente de compilar agora */
-async function tryLoadLastPdf(){
-  if(!GH.user||!GH.repo||!GH.token) return;
-  try{
-    const blob=await fetchReleasePdf();
-    showPdfBlob(blob);
-    logLine("Último PDF carregado do GitHub. ✓","ok");
-  }catch(e){
-    /* silencioso se ainda não tem release */
-  }
-}
-
-async function loadLastPdf(){
-  if(!GH.user||!GH.repo||!GH.token){toast("Conecte o GitHub primeiro");return;}
-  clearLog();
-  logLine("Buscando o último PDF gerado…");
-  try{
-    /* tenta pela release tag primeiro */
-    try{
-      const blob=await fetchReleasePdf();
-      showPdfBlob(blob);
-      logLine("PDF da última compilação carregado. ✓","ok");
-      toast("PDF carregado");
-      return;
-    }catch(_){}
-    /* fallback: pega o último run bem-sucedido */
-    logLine("Release não encontrada. Buscando última Action bem-sucedida…","warn");
-    const r=await gh(`/repos/${GH.user}/${GH.repo}/actions/runs?branch=${GH.branch}&status=success&per_page=5`);
-    if(!r.ok) throw new Error("HTTP "+r.status);
-    const runs=(await r.json()).workflow_runs||[];
-    if(!runs.length) throw new Error("nenhuma compilação bem-sucedida encontrada");
-    logLine("Última compilação: Run #"+runs[0].run_number+" ("+new Date(runs[0].updated_at).toLocaleString("pt-BR")+")","ok");
-    /* tenta baixar da release novamente após encontrar o run */
-    const blob=await fetchReleasePdf();
-    showPdfBlob(blob);
-    logLine("PDF carregado. ✓","ok");
-    toast("PDF carregado");
-  }catch(e){
-    logLine("Não foi possível carregar o PDF: "+e.message,"err");
-    toast("PDF não encontrado");
-  }
-}
-
-async function fetchReleasePdf() {
-  if (!GH.user || !GH.repo) throw new Error("Configurações do GitHub ausentes");
-
-  const targetPdf = pdfName();
-  
-  // URL da API para pegar o arquivo cru (raw) diretamente da branch gh-pages
-  const branchUrl = `${GH_API}/repos/${GH.user}/${GH.repo}/contents/${targetPdf}?ref=gh-pages`;
-
-  // Baixa os metadados do arquivo usando o Token do usuário para dar acesso se for privado
-  const r1 = await fetch(branchUrl, {
-    method: "GET",
-    headers: {
-      "Authorization": "Bearer " + GH.token,
-      "Accept": "application/vnd.github.v3.raw" // Este header força a API a cuspir os bytes diretos do PDF
-    }
-  });
-
-  if (!r1.ok) {
-    throw new Error(`PDF não encontrado na branch gh-pages (HTTP ${r1.status}). Verifique se a Action terminou.`);
-  }
-
-  return r1.blob();
 }
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -786,20 +601,310 @@ function notify(title,body){
     Notification.requestPermission().then(p=>{if(p==="granted")new Notification(title,{body});});
 }
 
-/* ---------- 7c. Conectar GitHub ---------- */
-function configRepo(){
-  const u=prompt("Usuário ou organização do GitHub:",GH.user);
-  if(u===null)return;
-  const r=prompt("Nome do repositório:",GH.repo);
-  if(r===null)return;
-  const b=prompt("Branch (normalmente main):",GH.branch||"main");
-  if(b===null)return;
-  const t=prompt("Token de acesso (fine-grained: Contents read/write + Actions read).\nDeixe em branco pra manter o atual:","");
-  const next={user:u.trim(),repo:r.trim(),branch:(b.trim()||"main")};
-  if(t&&t.trim())next.token=t.trim();
-  setGhCfg(next);
-  toast("GitHub conectado: "+next.user+"/"+next.repo);
+function showPdfBlob(blob){
+  const url=URL.createObjectURL(blob);
+  $("#previewPh").style.display="none";
+  const f=$("#pdfframe");f.style.display="block";f.src=url;
 }
+
+/* endpoint do servidor; cai pra valor salvo se SERVER_URL estiver vazio */
+function serverUrl(){return SERVER_URL||GHcfg.server||"";}
+let GHcfg={server:""};
+function setServer(u){GHcfg.server=u;dbSet("__server_url",u);}
+
+/* garante que há servidor e login antes de chamar a API */
+async function ensureReady(){
+  if(!serverUrl()){toast("Configure o servidor primeiro");logLine("Defina a URL do servidor em \"Servidor\".","err");return null;}
+  if(!authUser||!getIdToken){toast("Faça login com Google");logLine("Clique em \"Entrar\" pra logar com Google.","err");return null;}
+  try{return await getIdToken();}
+  catch(e){logLine("Não consegui obter o token de login: "+e.message,"err");return null;}
+}
+
+/* guarda o último PDF compilado, pra download e como referência */
+let lastPdfBlob=null;
+
+/* ---------- 7a. COMPILAR (só compila e mostra, sem push) ---------- */
+async function compileOnly(){
+  clearLog();
+  if(!preflight()){toast("Há \\input ausentes");return;}
+  const jwt=await ensureReady();if(!jwt)return;
+
+  $("#btnCompile").disabled=true;
+  const nf=Object.keys(files).length,nb=Object.keys(binaries).length;
+  logLine("Compilando "+nf+" arquivos + "+nb+" recursos…");
+  try{
+    const r=await fetch(serverUrl().replace(/\/$/,"")+"/compile",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+jwt},
+      body:JSON.stringify({files,binaries}),
+    });
+    if(!r.ok){
+      let msg="HTTP "+r.status;
+      try{const j=await r.json();if(j.error)msg=j.error;
+        if(j.log){logLine("— log do LaTeX —","warn");j.log.split("\n").slice(-25).forEach(l=>logLine(l));}
+      }catch(_){}
+      throw new Error(msg);
+    }
+    const blob=await r.blob();
+    lastPdfBlob=blob;
+    $("#btnDownload").disabled=false;
+    showPdfBlob(blob);
+    logLine("PDF compilado e carregado no preview. ✓","ok");
+    notify("PDF pronto ✓","Compilação concluída.");
+    toast("PDF pronto");
+    if(window.innerWidth<=880)switchTab("preview");
+  }catch(e){
+    logLine("Falha: "+e.message,"err");
+    if(/401|403/.test(e.message))logLine("Login não autorizado pra este servidor.","warn");
+    toast("Erro ao compilar");
+  }finally{$("#btnCompile").disabled=false;}
+}
+
+/* ---------- 7a-b. BAIXAR o PDF do preview ---------- */
+function downloadPdf(){
+  if(!lastPdfBlob){toast("Compile o PDF primeiro");return;}
+  const name=(rootTex?rootTex.replace(/\.tex$/,"").split("/").pop():"documento")+".pdf";
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(lastPdfBlob);a.download=name;a.click();
+  toast("Baixando "+name);
+}
+
+/* ---------- 7a-c. PUSH pro GitHub (fonte + PDF na gh-pages) ---------- */
+async function pushToGitHub(){
+  clearLog();
+  const jwt=await ensureReady();if(!jwt)return;
+  $("#btnPush").disabled=true;
+  const nf=Object.keys(files).length,nb=Object.keys(binaries).length;
+  logLine("Enviando "+nf+" arquivos + "+nb+" recursos ao GitHub…");
+  try{
+    const r=await fetch(serverUrl().replace(/\/$/,"")+"/push",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+jwt},
+      body:JSON.stringify({files,binaries}),
+    });
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok && !j.source){throw new Error(j.error||("HTTP "+r.status));}
+    if(j.source==="ok")logLine("Fonte versionada no GitHub. ✓","ok");
+    else logLine("Push da fonte: "+(j.source||"sem status"), j.source==="ok"?"ok":"warn");
+    if(j.pdf==="ok")logLine("PDF publicado na gh-pages. ✓","ok");
+    else if(j.pdf)logLine("PDF: "+j.pdf, j.pdf==="ok"?"ok":"warn");
+    if(j.source==="ok"){ savePushSnapshot(); await syncBaseAfterPush(); }   // guarda estado + atualiza base compartilhada
+    notify("Enviado ao GitHub","Fonte e PDF versionados.");
+    toast("Enviado ao GitHub");
+  }catch(e){
+    logLine("Falha no push: "+e.message,"err");
+    if(/401|403/.test(e.message))logLine("Login não autorizado pra este servidor.","warn");
+    toast("Erro no push");
+  }finally{$("#btnPush").disabled=false;}
+}
+
+/* ---------- 7b. puxar o projeto do GitHub (via servidor) ---------- */
+async function pullFromGitHub(){
+  if(Object.keys(files).length>1 && dirty &&
+     !confirm("Isso substitui o conteúdo atual pelo que está no GitHub. Continuar?"))return;
+  clearLog();
+  const jwt=await ensureReady();if(!jwt)return;
+  logLine("Carregando o projeto do GitHub via servidor…");
+  $("#btnPull")&&($("#btnPull").disabled=true);
+  try{
+    const r=await fetch(serverUrl().replace(/\/$/,"")+"/pull",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+jwt},
+      body:JSON.stringify({}),
+    });
+    if(!r.ok){let msg="HTTP "+r.status;try{const j=await r.json();if(j.error)msg=j.error;}catch(_){}throw new Error(msg);}
+    const j=await r.json();
+    if(!j.files||!Object.keys(j.files).length)throw new Error("nenhum arquivo retornado");
+    files=j.files;binaries=j.binaries||{};
+    await persistEverything();rescanReferenced();
+    openFile(rootTex||Object.keys(files)[0]);
+    setDirty(false);
+    logLine("Projeto carregado do GitHub. ✓","ok");
+    toast(Object.keys(files).length+" arquivos + "+Object.keys(binaries).length+" recursos");
+  }catch(e){
+    logLine("Falha ao puxar do GitHub: "+e.message,"err");
+    toast("Erro ao puxar");
+  }finally{$("#btnPull")&&($("#btnPull").disabled=false);}
+}
+
+/* ---------- 7c. configurar servidor ---------- */
+function configRepo(){
+  const u=prompt("URL do servidor de compilação (Cloud Run):\nex.: https://verso-xxxxx.run.app",serverUrl());
+  if(u===null)return;
+  setServer(u.trim().replace(/\/$/,""));
+  toast(u.trim()?("Servidor: "+u.trim()):"Servidor limpo");
+}
+
+/* ============================================================
+   7h. COLABORAÇÃO (Leva A) — Firestore, escrita só por botão
+   ============================================================ */
+let fbDb=null;                 // Firestore
+let reviewMode=false;          // true quando aberto via link de revisor
+let reviewName="";             // nome do revisor
+let projectId=null;            // id do projeto compartilhado (dono ou revisor)
+let projectBaseFp=null;        // fingerprint da base contra a qual se revisa
+
+function initFirestore(){
+  if(!firebaseConfig.apiKey||!window.firebase?.firestore)return;
+  try{ fbDb=firebase.firestore(); }catch(e){ console.error(e); }
+}
+
+/* --- snapshot do último push (pra detectar mudanças não publicadas) --- */
+function projectFingerprint(){
+  // hash simples e estável do conteúdo textual + binário
+  const obj={f:files,b:binaries};
+  const str=JSON.stringify(obj, Object.keys(obj).sort());
+  let h=0; for(let i=0;i<str.length;i++){h=(h*31+str.charCodeAt(i))|0;}
+  return String(h);
+}
+function savePushSnapshot(){ dbSet("__push_fp", projectFingerprint()); }
+async function lastPushFingerprint(){ try{return await dbGet("__push_fp");}catch(_){return null;} }
+
+/* --- gera/recupera um id estável do projeto --- */
+async function ensureProjectId(){
+  if(projectId)return projectId;
+  let id=await dbGet("__project_id").catch(()=>null);
+  if(!id){ id=(Date.now().toString(36)+Math.random().toString(36).slice(2,8)); dbSet("__project_id",id); }
+  projectId=id;return id;
+}
+
+/* --- DONO: compartilhar (sobe baseFiles + gera link) --- */
+async function shareProject(){
+  clearLog();
+  if(reviewMode){toast("Revisores não compartilham");return;}
+  if(!firebaseConfig.apiKey||!fbDb){logLine("Firebase não configurado neste app.","err");toast("Configure o Firebase");return;}
+  if(!authUser){logLine("Entre com Google pra compartilhar.","err");toast("Faça login");return;}
+
+  // só compartilha o que está publicado (igual ao último push)
+  const fp=projectFingerprint(), last=await lastPushFingerprint();
+  if(last!==fp){
+    logLine("Há mudanças não publicadas.","warn");
+    logLine("Faça o Push antes de compartilhar — o link reflete a versão do GitHub.","warn");
+    toast("Faça o push antes de compartilhar");
+    return;
+  }
+  try{
+    const id=await ensureProjectId();
+    await fbDb.collection("projetos").doc(id).set({
+      dono: authUser.email||"",
+      baseFiles: files,
+      baseBinaries: binaries,
+      baseFp: projectFingerprint(),
+      atualizado: Date.now(),
+      compartilhado: true,
+      janelaAberta: true,           // abre a janela de revisão
+    },{merge:true});
+    const link=location.origin+location.pathname+"#p/"+id;
+    logLine("Projeto compartilhado. ✓","ok");
+    logLine("Link para revisores:");
+    logLine(link);
+    try{await navigator.clipboard.writeText(link);toast("Link copiado");}catch(_){toast("Link gerado");}
+  }catch(e){
+    logLine("Falha ao compartilhar: "+e.message,"err");toast("Erro ao compartilhar");
+  }
+}
+
+/* --- DONO: após push, atualizar a base compartilhada (avisa se há janela aberta) --- */
+async function syncBaseAfterPush(){
+  if(reviewMode)return;
+  if(!firebaseConfig.apiKey||!fbDb||!authUser)return;
+  const id=projectId||await dbGet("__project_id").catch(()=>null);
+  if(!id)return;                         // projeto nunca foi compartilhado
+  try{
+    const doc=await fbDb.collection("projetos").doc(id).get();
+    if(!doc.exists||!doc.data().compartilhado)return;
+    // há revisões em andamento?
+    const revs=await fbDb.collection("projetos").doc(id).collection("revisoes").get();
+    const abertas=revs.size;
+    if(doc.data().janelaAberta && abertas>0){
+      const nomes=revs.docs.map(d=>d.id).join(", ");
+      if(!confirm("Há revisões em andamento ("+nomes+"). Atualizar a base compartilhada agora pode defasá-las. Continuar?"))
+        { logLine("Base compartilhada NÃO foi atualizada (revisões abertas).","warn"); return; }
+    }
+    await fbDb.collection("projetos").doc(id).set({
+      baseFiles: files, baseBinaries: binaries, baseFp: projectFingerprint(),
+      atualizado: Date.now(),
+    },{merge:true});
+    logLine("Base compartilhada atualizada no Firestore. ✓","ok");
+  }catch(e){ logLine("Não atualizei a base compartilhada: "+e.message,"warn"); }
+}
+
+/* --- REVISOR: detecta link #p/<id> e entra --- */
+async function maybeEnterReviewMode(){
+  const m=location.hash.match(/^#p\/([A-Za-z0-9]+)/);
+  if(!m)return false;
+  const id=m[1];
+  if(!firebaseConfig.apiKey||!fbDb){
+    alert("Este link precisa do Firebase configurado neste app.");return false;
+  }
+  try{
+    const doc=await fbDb.collection("projetos").doc(id).get();
+    if(!doc.exists){alert("Projeto não encontrado.");return false;}
+    const data=doc.data();
+    if(data.janelaAberta===false){
+      alert("Esta rodada de revisão foi encerrada pelo dono. Peça um novo link.");
+      return false;
+    }
+    let name="";
+    while(!name){ name=(prompt("Quem é você? (seu nome aparecerá nas edições)","")||"").trim(); if(name===null)return false; }
+    reviewMode=true;reviewName=name;projectId=id;
+    files=data.baseFiles||{};binaries=data.baseBinaries||{};
+    projectBaseFp=data.baseFp||null;     // marca contra qual base estou revisando
+    // se já existe revisão minha, retoma de onde parei
+    try{
+      const mine=await fbDb.collection("projetos").doc(id).collection("revisoes").doc(name).get();
+      if(mine.exists && mine.data().files){ files=mine.data().files; toast("Retomando sua revisão"); }
+    }catch(_){}
+    rescanReferenced();
+    openFile(rootTex||Object.keys(files)[0]);
+    applyReviewerUI();
+    logLine("Modo revisor: "+name+". Edite; salvamos automaticamente e você pode usar Ctrl+S.","ok");
+    return true;
+  }catch(e){ alert("Erro ao abrir o projeto: "+e.message); return false; }
+}
+
+/* --- REVISOR: salvar minha revisão no Firestore --- */
+async function saveRevision(silent){
+  if(!reviewMode){ saveAll(); return; }   // dono salva local normalmente
+  if(!fbDb||!projectId)
+    { if(!silent)toast("Sem conexão com o projeto"); return; }
+  try{
+    await fbDb.collection("projetos").doc(projectId).collection("revisoes").doc(reviewName).set({
+      autor: reviewName,
+      files: files,
+      base: projectBaseFp||null,   // contra qual base esta revisão foi feita
+      atualizado: Date.now(),
+      visto: false,
+    });
+    setDirty(false);
+    if(!silent){ toast("Revisão enviada"); logLine("Sua revisão foi salva. O dono verá as mudanças.","ok"); }
+  }catch(e){ if(!silent){ logLine("Falha ao salvar revisão: "+e.message,"err");toast("Erro ao salvar"); } }
+}
+
+/* auto-save do revisor: a cada X min E ao sair/fechar */
+const AUTOSAVE_MIN=3;
+let autosaveTimer=null;
+function startReviewerAutosave(){
+  if(autosaveTimer)clearInterval(autosaveTimer);
+  autosaveTimer=setInterval(()=>{ if(reviewMode&&dirty)saveRevision(true); }, AUTOSAVE_MIN*60*1000);
+  // salva ao sair/fechar a aba (best-effort)
+  window.addEventListener("beforeunload",()=>{ if(reviewMode&&dirty){
+    try{ navigator.sendBeacon && fbDb && saveRevision(true); }catch(_){}
+  }});
+  // salva também quando a aba perde o foco/é ocultada
+  document.addEventListener("visibilitychange",()=>{
+    if(document.visibilityState==="hidden"&&reviewMode&&dirty)saveRevision(true);
+  });
+}
+
+/* --- ajusta a interface pro revisor (esconde push/compartilhar/config) --- */
+function applyReviewerUI(){
+  ["btnPush","btnRepo","btnShare"].forEach(id=>{const el=$("#"+id);if(el)el.style.display="none";});
+  const badge=$("#reviewBadge");
+  if(badge){badge.style.display="inline-flex";badge.textContent="revisor: "+reviewName;}
+  startReviewerAutosave();
+}
+
 
 /* ---------- 7d. varredura de \input ---------- */
 function rescanReferenced(){
@@ -845,51 +950,6 @@ async function importZip(file){
   toast(Object.keys(files).length+" arquivos + "+Object.keys(binaries).length+" recursos");
 }
 
-/* ---------- 7f. sincronizar do GitHub ---------- */
-async function pullFromGitHub(){
-  if(!GH.user||!GH.repo||!GH.token){toast("Conecte o GitHub primeiro");return;}
-  if(Object.keys(files).length>1&&dirty&&
-     !confirm("Isso substitui o conteúdo local pelo do GitHub. Continuar?"))return;
-  clearLog();
-  logLine("Sincronizando "+GH.user+"/"+GH.repo+" ("+GH.branch+")…");
-  $("#btnPull").disabled=true;
-  try{
-    const refR=await gh(`/repos/${GH.user}/${GH.repo}/git/ref/heads/${GH.branch}`);
-    if(!refR.ok)throw new Error("branch \""+GH.branch+"\" não encontrado (HTTP "+refR.status+")");
-    const commitSha=(await refR.json()).object.sha;
-    const cR=await gh(`/repos/${GH.user}/${GH.repo}/git/commits/${commitSha}`);
-    const treeSha=(await cR.json()).tree.sha;
-    const tR=await gh(`/repos/${GH.user}/${GH.repo}/git/trees/${treeSha}?recursive=1`);
-    if(!tR.ok)throw new Error("árvore: HTTP "+tR.status);
-    const tree=(await tR.json()).tree.filter(n=>n.type==="blob");
-    const skip=p=>p==="index.html"||p.startsWith(".github/")||p===".gitignore";
-    const newText={},newBin={};let done=0;
-    const blobs=tree.filter(n=>!skip(n.path));
-    for(const n of blobs){
-      const bR=await gh(`/repos/${GH.user}/${GH.repo}/git/blobs/${n.sha}`);
-      if(!bR.ok)throw new Error(n.path+": HTTP "+bR.status);
-      const b64=(await bR.json()).content.replace(/\n/g,"");
-      if(isText(n.path)) newText[n.path]=decodeURIComponent(escape(atob(b64)));
-      else newBin[n.path]=b64;
-      done++;if(done===1||done===blobs.length||done%5===0)logLine("  baixando… ("+done+"/"+blobs.length+")");
-    }
-    if(!Object.keys(newText).length)throw new Error("nenhum arquivo de texto no repo");
-    files=newText;binaries=newBin;
-    await persistEverything();rescanReferenced();
-    openFile(rootTex||Object.keys(files)[0]);
-    setDirty(false);
-    logLine("Sincronizado com o GitHub. ✓","ok");
-    toast(Object.keys(files).length+" arquivos + "+Object.keys(binaries).length+" recursos");
-    /* após sincronizar, carrega o último PDF */
-    tryLoadLastPdf();
-  }catch(e){
-    logLine("Falha ao sincronizar: "+e.message,"err");
-    if(/401|403|Bad credentials|Resource not accessible/i.test(e.message))
-      logLine("Verifique o token (Contents: read).","warn");
-    toast("Erro ao sincronizar");
-  }finally{$("#btnPull").disabled=false;}
-}
-
 /* ---------- 7g. exportar .zip ---------- */
 async function exportZip(){
   if(!window.JSZip){toast("Biblioteca de zip não carregou");return;}
@@ -924,7 +984,6 @@ function setupDropdown(triggerId, menuId, wrapId){
   });
 }
 setupDropdown("btnGhDrop","ghMenu","ghWrap");
-setupDropdown("btnCompileDrop","compileMenu","compileWrap");
 
 function closeAllDropdowns(){
   document.querySelectorAll(".dd-menu.open").forEach(m=>m.classList.remove("open"));
@@ -938,8 +997,11 @@ logBtn.onclick=()=>{
 };
 
 /* --- event bindings --- */
-$("#btnPublish").onclick=()=>{closeAllDropdowns();publish();};
-$("#btnLoadPdf").onclick=()=>{closeAllDropdowns();loadLastPdf();};
+$("#btnCompile").onclick=()=>{closeAllDropdowns();compileOnly();};
+$("#btnDownload").onclick=()=>{downloadPdf();};
+$("#btnPush").onclick=()=>{closeAllDropdowns();pushToGitHub();};
+$("#btnShare").onclick=()=>{closeAllDropdowns();shareProject();};
+$("#btnLogin").onclick=()=>{closeAllDropdowns();toggleLogin();};
 $("#btnExport").onclick=()=>{closeAllDropdowns();exportZip();};
 $("#btnImport").onclick=()=>{closeAllDropdowns();$("#zipInput").click();};
 $("#btnRepo").onclick=()=>{closeAllDropdowns();configRepo();};
@@ -947,8 +1009,8 @@ $("#btnPull").onclick=()=>{closeAllDropdowns();pullFromGitHub();};
 $("#zipInput").onchange=e=>{const f=e.target.files[0];if(f)importZip(f).catch(err=>{console.error(err);toast("Erro ao ler zip");});e.target.value="";};
 
 document.addEventListener("keydown",e=>{
-  if((e.ctrlKey||e.metaKey)&&e.key==="s"){e.preventDefault();saveAll();}
-  if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){e.preventDefault();publish();}
+  if((e.ctrlKey||e.metaKey)&&e.key==="s"){e.preventDefault();reviewMode?saveRevision():saveAll();}
+  if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){e.preventDefault();compileOnly();}
 });
 window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
 
@@ -1019,14 +1081,66 @@ window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.return
   window.addEventListener("resize",positionHandles);
 })();
 
+/* ---------- 9b. Firebase Auth (login Google) ---------- */
+/* PREENCHA com a config do seu projeto Firebase (Console → Configurações do projeto).
+   Só apps autorizados em "Domínios autorizados" conseguem logar. */
+const firebaseConfig = {
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  appId: ""
+};
+
+let fbAuth=null;
+function initFirebase(){
+  if(!firebaseConfig.apiKey){ updateAuthUI(); return; }
+  try{
+    firebase.initializeApp(firebaseConfig);
+    fbAuth=firebase.auth();
+    getIdToken=()=>fbAuth.currentUser?fbAuth.currentUser.getIdToken():Promise.reject(new Error("não logado"));
+    fbAuth.onAuthStateChanged(u=>{
+      authUser=u?{email:u.email,name:u.displayName}:null;
+      updateAuthUI();
+      if(u)toast("Logado: "+(u.displayName||u.email));
+    });
+  }catch(e){console.error(e);}
+}
+
+function toggleLogin(){
+  if(!firebaseConfig.apiKey){
+    logLine("Firebase não configurado neste app.","err");
+    logLine("Preencha firebaseConfig no index.html (Console do Firebase).","warn");
+    toast("Configure o Firebase");
+    return;
+  }
+  if(!fbAuth)return;
+  if(authUser){ fbAuth.signOut().then(()=>toast("Sessão encerrada")); }
+  else{
+    const provider=new firebase.auth.GoogleAuthProvider();
+    fbAuth.signInWithPopup(provider).catch(e=>{
+      logLine("Falha no login: "+e.message,"err");toast("Falha no login");});
+  }
+}
+
+function updateAuthUI(){
+  const b=$("#btnLogin");if(!b)return;
+  b.innerHTML=authUser
+    ? '<i data-lucide="log-out"></i>Sair ('+(authUser.name||authUser.email).split(" ")[0]+")"
+    : '<i data-lucide="log-in"></i>Entrar com Google';
+  renderIcons();
+}
+
 /* ---------- 10. service worker ---------- */
 if("serviceWorker"in navigator){
   const sw=`self.addEventListener("install",e=>self.skipWaiting());
   self.addEventListener("activate",e=>e.waitUntil(self.clients.claim()));
   self.addEventListener("fetch",e=>{
-    e.respondWith(caches.open("lavoura-v1").then(async c=>{
-      const hit=await c.match(e.request);
-      try{const net=await fetch(e.request);c.put(e.request,net.clone());return net;}
+    const req=e.request;
+    // só cacheia GET de mesma origem; nunca intercepta API/login
+    if(req.method!=="GET"||new URL(req.url).origin!==self.location.origin)return;
+    e.respondWith(caches.open("verso-v1").then(async c=>{
+      const hit=await c.match(req);
+      try{const net=await fetch(req);c.put(req,net.clone());return net;}
       catch(_){return hit||Response.error();}
     }));
   });`;
@@ -1034,7 +1148,20 @@ if("serviceWorker"in navigator){
   navigator.serviceWorker.register(url).catch(()=>{});
 }
 
-load().then(()=>setTimeout(()=>cm.refresh(),60));
+/* renderiza os ícones Lucide (CDN). Se offline e não carregou, ignora. */
+function renderIcons(){ try{ if(window.lucide)lucide.createIcons(); }catch(_){} }
+
+async function boot(){
+  initFirebase();
+  initFirestore();
+  renderIcons();
+  // se é um link de revisor (#p/<id>), entra em modo revisor em vez do projeto local
+  let entered=false;
+  try{ entered=await maybeEnterReviewMode(); }catch(_){}
+  if(!entered){ await load(); }
+  setTimeout(()=>{cm.refresh();renderIcons();},60);
+}
+boot();
 </script>
 </body>
 </html>
