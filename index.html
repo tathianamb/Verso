@@ -80,9 +80,36 @@
     min-height:0;height:100%;position:relative;overflow:hidden;
     background:var(--paper);
   }
+  /* colunas colapsadas viram faixa fina */
+  .cols.files-collapsed{grid-template-columns:44px var(--w2,1fr) 1fr}
+  .cols.preview-collapsed{grid-template-columns:var(--w1,220px) 1fr 44px}
+  .cols.files-collapsed.preview-collapsed{grid-template-columns:44px 1fr 44px}
   .pane{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
   .pane.files{background:var(--tex-deep);border-right:1px solid #06403a}
   .pane.editor{border-right:1px solid var(--line)}
+
+  /* faixa fina que aparece quando a coluna está colapsada */
+  .collapsed-strip{
+    display:none;flex-direction:column;align-items:center;gap:10px;
+    padding:10px 0;background:var(--tex-deep);height:100%;
+  }
+  .collapsed-strip button{
+    background:none;border:0;color:#cfe4dd;cursor:pointer;padding:6px;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .collapsed-strip button:hover{background:#11423b}
+  .collapsed-strip .vlabel{
+    writing-mode:vertical-rl;text-orientation:mixed;font-size:10px;letter-spacing:.18em;
+    text-transform:uppercase;color:#6f968c;font-weight:700;margin-top:4px;user-select:none;
+  }
+  .collapsed-strip svg{width:20px;height:20px}
+  /* quando colapsada: some o conteúdo normal, aparece a faixa */
+  .cols.files-collapsed #rh1{display:none}
+  .cols.preview-collapsed #rh2{display:none}
+  .cols.files-collapsed .pane.files > :not(.collapsed-strip){display:none}
+  .cols.files-collapsed .pane.files .collapsed-strip{display:flex}
+  .cols.preview-collapsed .pane.preview > :not(.collapsed-strip){display:none}
+  .cols.preview-collapsed .pane.preview .collapsed-strip{display:flex}
 
   /* ---------- resize handles ---------- */
   .resize-handle{
@@ -362,10 +389,18 @@
               <span class="ic-badge"><i data-lucide="arrow-down-to-line"></i></span>
             </span>
           </button>
+          <button class="ibtn" id="btnCollapseFiles" title="Recolher arquivos">
+            <i data-lucide="panel-left-close"></i>
+          </button>
 
         </div>
       </div>
       <div class="tree" id="tree"></div>
+      <!-- faixa fina quando recolhida -->
+      <div class="collapsed-strip" id="filesStrip">
+        <button id="btnExpandFiles" title="Expandir arquivos"><i data-lucide="panel-left-open"></i></button>
+        <span class="vlabel">Arquivos</span>
+      </div>
     </aside>
 
     <!-- resize handle 1 (files | editor) -->
@@ -399,6 +434,9 @@
             <span class="ic-badge"><i data-lucide="download"></i></span>
           </span>
         </button>
+        <button class="ibtn" id="btnCollapsePreview" title="Recolher PDF">
+          <i data-lucide="panel-right-close"></i>
+        </button>
       </div>
       <div class="ph" id="previewPh">
         <div class="big">Escreva. Compile. Veja.</div>
@@ -417,6 +455,11 @@
         </a>
       </div>
       <div id="log"></div>
+      <!-- faixa fina quando recolhida -->
+      <div class="collapsed-strip" id="previewStrip">
+        <button id="btnExpandPreview" title="Expandir PDF"><i data-lucide="panel-right-open"></i></button>
+        <span class="vlabel">PDF</span>
+      </div>
     </section>
   </div>
 
@@ -1176,6 +1219,18 @@ logBtn.onclick=()=>{
 /* --- event bindings --- */
 $("#btnCompile").onclick=()=>{closeAllDropdowns();compileOnly();};
 $("#btnDownload").onclick=()=>{downloadPdf();};
+
+/* colapsar/expandir colunas laterais (desktop) */
+function setCollapsed(side,on){
+  const cols=$("#cols");
+  cols.classList.toggle(side+"-collapsed",on);
+  try{metaSet("collapse_"+side,on?"1":"");}catch(_){}
+  setTimeout(()=>{try{cm.refresh();}catch(_){}},210);
+}
+$("#btnCollapseFiles").onclick=()=>setCollapsed("files",true);
+$("#btnExpandFiles").onclick=()=>setCollapsed("files",false);
+$("#btnCollapsePreview").onclick=()=>setCollapsed("preview",true);
+$("#btnExpandPreview").onclick=()=>setCollapsed("preview",false);
 $("#btnPush").onclick=()=>{closeAllDropdowns();pushToGitHub();};
 $("#btnShare").onclick=()=>{closeAllDropdowns();shareProject();};
 $("#btnLogin").onclick=()=>{closeAllDropdowns();toggleLogin();};
@@ -1345,6 +1400,11 @@ async function boot(){
   try{ entered=await maybeEnterReviewMode(); }catch(_){}
   if(!entered){ await load(); }
   updateProjectUI();
+  // restaura colunas recolhidas
+  try{
+    if(await metaGet("collapse_files"))$("#cols").classList.add("files-collapsed");
+    if(await metaGet("collapse_preview"))$("#cols").classList.add("preview-collapsed");
+  }catch(_){}
   setTimeout(()=>{cm.refresh();renderIcons();},60);
 }
 boot();
