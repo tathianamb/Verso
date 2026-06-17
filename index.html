@@ -234,15 +234,17 @@
   .preview .ph code{font-family:var(--mono);font-size:12px;background:#cfc8b5;padding:2px 6px;border-radius:4px}
   .pdfframe{flex:1;border:0;width:100%;background:#cfc8b5;min-height:0}
   #pdfOpen{
-    position:absolute;inset:var(--head-h) 0 0 0;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
-    background:#dad3c2;color:#5d6660;text-align:center;padding:24px;z-index:4;
+    position:absolute;right:12px;bottom:12px;z-index:4;
+    display:flex;
   }
-  #pdfOpen p{margin:0;font-size:13px;max-width:280px;line-height:1.5}
   #pdfOpen a{
-    background:var(--tex);color:#fff;text-decoration:none;font-weight:700;font-size:14px;
-    padding:11px 26px;border-radius:999px;letter-spacing:.02em;
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--tex-deep);color:#cfe4dd;text-decoration:none;
+    font-weight:600;font-size:11px;letter-spacing:.02em;
+    padding:7px 12px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.25);
+    opacity:.82;transition:opacity .15s;
   }
+  #pdfOpen a:hover{opacity:1}
   #pdfOpen a:active{transform:translateY(1px)}
 
   /* ---------- log (overlay opaco sobre o PDF) ---------- */
@@ -407,11 +409,12 @@
       </div>
       <iframe class="pdfframe" id="pdfframe" style="display:none"></iframe>
       <div id="pdfOpen" style="display:none">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="width:46px;height:46px;opacity:.55">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-        </svg>
-        <p>Pré-visualização embutida não é suportada neste navegador.</p>
-        <a href="#" target="_blank" rel="noopener">Abrir PDF</a>
+        <a href="#" target="_blank" rel="noopener" title="Abrir o PDF em nova aba">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
+            <path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+          </svg>
+          Abrir em nova aba
+        </a>
       </div>
       <div id="log"></div>
     </section>
@@ -660,20 +663,12 @@ function showPdfBlob(blob){
   lastPdfUrl=url;
   $("#previewPh").style.display="none";
   const f=$("#pdfframe");
-  // tenta exibir embutido (funciona no desktop)
+  // exibe embutido (funciona em desktop e Firefox, inclusive em tablet)
   f.style.display="block";f.src=url;
-  // fallback pra tablet/celular: muitos navegadores não renderizam PDF via iframe/blob.
-  // mostramos um botão "Abrir PDF" que navega na própria aba (não é bloqueado como pop-up).
-  const isTouch = ("ontouchstart" in window) || window.innerWidth<=880;
+  // link auxiliar discreto, sempre disponível (útil se algum navegador não renderizar o iframe).
+  // NÃO cobre o preview — fica como um botão pequeno no canto.
   const ph=$("#pdfOpen");
-  if(ph){
-    if(isTouch){
-      ph.style.display="flex";
-      ph.querySelector("a").href=url;
-    }else{
-      ph.style.display="none";
-    }
-  }
+  if(ph){ ph.style.display="flex"; ph.querySelector("a").href=url; }
 }
 
 /* endpoint do servidor; cai pra valor salvo se SERVER_URL estiver vazio */
@@ -830,14 +825,14 @@ function updateProjectUI(){
   if(el)el.textContent=currentProject?currentProject.name:"sem projeto";
 }
 
-/* cadastra um novo projeto */
+/* cadastra um novo projeto (usa o nome do repo como rótulo) */
 async function addProject(){
-  const name=(prompt("Nome do projeto (como vai aparecer na lista):","")||"").trim();
-  if(!name)return;
   const repo=(prompt("Repositório no GitHub (só o nome, ex.: tese-latex):\n(ou 'owner/repo' se for de outra conta)","")||"").trim();
   if(!repo)return;
-  const branch=(prompt("Branch (normalmente main):","main")||"main").trim()||"main";
-  if(projects.some(p=>p.name===name)){toast("Já existe um projeto com esse nome");return;}
+  const branch=(prompt("Branch (normalmente main; a tese usa master):","main")||"main").trim()||"main";
+  const name=repo.split("/").pop();         // rótulo = nome do repo
+  if(projects.some(p=>p.repo===repo)){toast("Esse repositório já está cadastrado");
+    currentProject=projects.find(p=>p.repo===repo);await saveProjects();await switchProject(currentProject,true);return;}
   projects.push({name,repo,branch});
   currentProject={name,repo,branch};
   await saveProjects();
