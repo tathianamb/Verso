@@ -80,29 +80,32 @@
     min-height:0;height:100%;position:relative;overflow:hidden;
     background:var(--paper);
   }
-  /* colunas colapsadas viram faixa fina */
-  .cols.files-collapsed{grid-template-columns:44px var(--w2,1fr) 1fr}
-  .cols.preview-collapsed{grid-template-columns:var(--w1,220px) 1fr 44px}
-  .cols.files-collapsed.preview-collapsed{grid-template-columns:44px 1fr 44px}
+  /* colunas colapsadas viram faixa fina (1rem) */
+  .cols.files-collapsed{grid-template-columns:1rem var(--w2,1fr) 1fr}
+  .cols.preview-collapsed{grid-template-columns:var(--w1,220px) 1fr 1rem}
+  .cols.files-collapsed.preview-collapsed{grid-template-columns:1rem 1fr 1rem}
   .pane{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
   .pane.files{background:var(--tex-deep);border-right:1px solid #06403a}
   .pane.editor{border-right:1px solid var(--line)}
 
   /* faixa fina que aparece quando a coluna está colapsada */
   .collapsed-strip{
-    display:none;flex-direction:column;align-items:center;gap:10px;
-    padding:10px 0;background:var(--tex-deep);height:100%;
+    display:none;flex-direction:column;align-items:center;
+    background:var(--tex-deep);height:100%;width:100%;
+    padding:8px 0;gap:8px;position:relative;
   }
   .collapsed-strip button{
-    background:none;border:0;color:#cfe4dd;cursor:pointer;padding:6px;border-radius:8px;
-    display:flex;align-items:center;justify-content:center;
+    background:none;border:0;color:#cfe4dd;cursor:pointer;padding:0;
+    display:flex;align-items:center;justify-content:center;opacity:.7;transition:opacity .15s;
   }
-  .collapsed-strip button:hover{background:#11423b}
-  .collapsed-strip .vlabel{
-    writing-mode:vertical-rl;text-orientation:mixed;font-size:10px;letter-spacing:.18em;
-    text-transform:uppercase;color:#6f968c;font-weight:700;margin-top:4px;user-select:none;
+  .collapsed-strip button:hover{opacity:1}
+  .collapsed-strip svg{width:13px;height:13px}
+  /* "handle" de 3 pontos verticais, centralizado */
+  .collapsed-strip .dots{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    display:flex;flex-direction:column;gap:3px;
   }
-  .collapsed-strip svg{width:20px;height:20px}
+  .collapsed-strip .dots i{width:3px;height:3px;border-radius:50%;background:#5d7771;display:block}
   /* quando colapsada: some o conteúdo normal, aparece a faixa */
   .cols.files-collapsed #rh1{display:none}
   .cols.preview-collapsed #rh2{display:none}
@@ -398,8 +401,8 @@
       <div class="tree" id="tree"></div>
       <!-- faixa fina quando recolhida -->
       <div class="collapsed-strip" id="filesStrip">
-        <button id="btnExpandFiles" title="Expandir arquivos"><i data-lucide="panel-left-open"></i></button>
-        <span class="vlabel">Arquivos</span>
+        <button id="btnExpandFiles" title="Expandir arquivos"><i data-lucide="chevron-right"></i></button>
+        <span class="dots"><i></i><i></i><i></i></span>
       </div>
     </aside>
 
@@ -457,8 +460,8 @@
       <div id="log"></div>
       <!-- faixa fina quando recolhida -->
       <div class="collapsed-strip" id="previewStrip">
-        <button id="btnExpandPreview" title="Expandir PDF"><i data-lucide="panel-right-open"></i></button>
-        <span class="vlabel">PDF</span>
+        <button id="btnExpandPreview" title="Expandir PDF"><i data-lucide="chevron-left"></i></button>
+        <span class="dots"><i></i><i></i><i></i></span>
       </div>
     </section>
   </div>
