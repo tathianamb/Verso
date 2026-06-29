@@ -639,7 +639,7 @@ function buildTree(){
       if(p.startsWith("\x00pdf\x00")){
         const pdfEl=document.createElement("div");
         pdfEl.className="fitem binary";
-        pdfEl.innerHTML=`<span class="ic">📄</span><span>${p.slice(6)}</span><small>PDF</small>`;
+        pdfEl.innerHTML=`<span class="ic">📄</span><span>${p.slice(5)}</span><small>PDF</small>`;
         pdfEl.onclick=()=>showPdfBlob(lastPdfBlob);
         tree.appendChild(pdfEl);
       } else {
