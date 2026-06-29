@@ -624,27 +624,28 @@ function buildTree(){
     tree.appendChild(el);
   };
 
+  // injeta o PDF como entrada virtual na raiz para entrar na ordenação alfabética
+  if(lastPdfBlob){
+    const pdf=pdfName();
+    (groups[ROOT]||(groups[ROOT]=[])).push("\x00pdf\x00"+pdf);
+  }
   const order=Object.keys(groups).sort((a,b)=>{
     if(a===ROOT)return -1;if(b===ROOT)return 1;return a.localeCompare(b);});
   for(const folder of order){
     const g=document.createElement("div");g.className="grp";
     g.textContent=folder===ROOT?"raiz":folder+"/";
     tree.appendChild(g);
-    groups[folder].sort().forEach(addItem);
-    if(folder===ROOT&&lastPdfBlob){
-      const pdfEl=document.createElement("div");
-      pdfEl.className="fitem binary";
-      pdfEl.innerHTML=`<span class="ic">📄</span><span>${pdfName()}</span><small>PDF</small>`;
-      pdfEl.onclick=()=>showPdfBlob(lastPdfBlob);
-      tree.appendChild(pdfEl);
-    }
-  }
-  if(lastPdfBlob&&!groups[ROOT]){
-    const pdfEl=document.createElement("div");
-    pdfEl.className="fitem binary";
-    pdfEl.innerHTML=`<span class="ic">📄</span><span>${pdfName()}</span><small>PDF</small>`;
-    pdfEl.onclick=()=>showPdfBlob(lastPdfBlob);
-    tree.appendChild(pdfEl);
+    groups[folder].sort().forEach(p=>{
+      if(p.startsWith("\x00pdf\x00")){
+        const pdfEl=document.createElement("div");
+        pdfEl.className="fitem binary";
+        pdfEl.innerHTML=`<span class="ic">📄</span><span>${p.slice(6)}</span><small>PDF</small>`;
+        pdfEl.onclick=()=>showPdfBlob(lastPdfBlob);
+        tree.appendChild(pdfEl);
+      } else {
+        addItem(p);
+      }
+    });
   }
 }
 function openFile(p){
