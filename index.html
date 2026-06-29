@@ -631,12 +631,18 @@ function buildTree(){
     g.textContent=folder===ROOT?"raiz":folder+"/";
     tree.appendChild(g);
     groups[folder].sort().forEach(addItem);
+    if(folder===ROOT&&lastPdfBlob){
+      const pdfEl=document.createElement("div");
+      pdfEl.className="fitem binary";
+      pdfEl.innerHTML=`<span class="ic">📄</span><span>${pdfName()}</span><small>PDF</small>`;
+      pdfEl.onclick=()=>showPdfBlob(lastPdfBlob);
+      tree.appendChild(pdfEl);
+    }
   }
-  if(lastPdfBlob){
-    const pdfLabel=pdfName();
+  if(lastPdfBlob&&!groups[ROOT]){
     const pdfEl=document.createElement("div");
     pdfEl.className="fitem binary";
-    pdfEl.innerHTML=`<span class="ic">📄</span><span>${pdfLabel}</span><small>PDF</small>`;
+    pdfEl.innerHTML=`<span class="ic">📄</span><span>${pdfName()}</span><small>PDF</small>`;
     pdfEl.onclick=()=>showPdfBlob(lastPdfBlob);
     tree.appendChild(pdfEl);
   }
