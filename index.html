@@ -268,7 +268,7 @@
   .preview .ph .big{font-family:var(--serif);font-size:21px;color:var(--ink)}
   .preview .ph code{font-family:var(--mono);font-size:12px;background:#cfc8b5;padding:2px 6px;border-radius:4px}
   #pdfViewer{flex:1;overflow-y:auto;background:#cfc8b5;padding:12px;box-sizing:border-box;min-height:0;scrollbar-width:thin}
-  #pdfViewer canvas{display:block;width:100%;margin-bottom:8px;border-radius:2px;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+  #pdfViewer canvas{display:block;margin-bottom:8px;border-radius:2px;box-shadow:0 2px 8px rgba(0,0,0,.18)}
 
   /* ---------- log (overlay opaco sobre o PDF) ---------- */
   #log{
@@ -743,10 +743,12 @@ async function showPdfBlob(blob){
     for(let i=1;i<=pdf.numPages;i++){
       const page=await pdf.getPage(i);
       const baseVp=page.getViewport({scale:1});
-      const scale=(viewer.clientWidth-24)/baseVp.width;
+      const dpr=window.devicePixelRatio||1;
+      const scale=((viewer.clientWidth-24)/baseVp.width)*dpr;
       const vp=page.getViewport({scale});
       const canvas=document.createElement("canvas");
       canvas.width=vp.width;canvas.height=vp.height;
+      canvas.style.width=(vp.width/dpr)+"px";canvas.style.height=(vp.height/dpr)+"px";
       viewer.appendChild(canvas);
       await page.render({canvasContext:canvas.getContext("2d"),viewport:vp}).promise;
     }
