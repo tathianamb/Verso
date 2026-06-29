@@ -267,20 +267,8 @@
   }
   .preview .ph .big{font-family:var(--serif);font-size:21px;color:var(--ink)}
   .preview .ph code{font-family:var(--mono);font-size:12px;background:#cfc8b5;padding:2px 6px;border-radius:4px}
-  .pdfframe{flex:1;border:0;width:100%;background:#cfc8b5;min-height:0}
-  #pdfOpen{
-    position:absolute;right:12px;bottom:12px;z-index:4;
-    display:flex;
-  }
-  #pdfOpen a{
-    display:inline-flex;align-items:center;gap:6px;
-    background:var(--tex-deep);color:#cfe4dd;text-decoration:none;
-    font-weight:600;font-size:11px;letter-spacing:.02em;
-    padding:7px 12px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.25);
-    opacity:.82;transition:opacity .15s;
-  }
-  #pdfOpen a:hover{opacity:1}
-  #pdfOpen a:active{transform:translateY(1px)}
+  #pdfViewer{flex:1;overflow-y:auto;background:#cfc8b5;padding:12px;box-sizing:border-box;min-height:0;scrollbar-width:thin}
+  #pdfViewer canvas{display:block;width:100%;margin-bottom:8px;border-radius:2px;box-shadow:0 2px 8px rgba(0,0,0,.18)}
 
   /* ---------- log (overlay opaco sobre o PDF) ---------- */
   #log{
@@ -342,6 +330,7 @@
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -454,15 +443,7 @@
         sem espera, sem polling. A fonte é versionada no GitHub.</div>
         <div>Primeira vez? Entre com Google e configure o servidor no menu do GitHub.</div>
       </div>
-      <iframe class="pdfframe" id="pdfframe" style="display:none"></iframe>
-      <div id="pdfOpen" style="display:none">
-        <a href="#" target="_blank" rel="noopener" title="Abrir o PDF em nova aba">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
-            <path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-          </svg>
-          Abrir em nova aba
-        </a>
-      </div>
+      <div id="pdfViewer" style="display:none"></div>
       <div id="log"></div>
       </div>
     </section>
@@ -745,19 +726,33 @@ function notify(title,body){
     Notification.requestPermission().then(p=>{if(p==="granted")new Notification(title,{body});});
 }
 
+if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc=
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
 let lastPdfUrl=null;
-function showPdfBlob(blob){
+async function showPdfBlob(blob){
   if(lastPdfUrl){ try{URL.revokeObjectURL(lastPdfUrl);}catch(_){} }
   const url=URL.createObjectURL(blob);
   lastPdfUrl=url;
   $("#previewPh").style.display="none";
-  const f=$("#pdfframe");
-  // exibe embutido (funciona em desktop e Firefox, inclusive em tablet)
-  f.style.display="block";f.src=url;
-  // link auxiliar discreto, sempre disponível (útil se algum navegador não renderizar o iframe).
-  // NÃO cobre o preview — fica como um botão pequeno no canto.
-  const ph=$("#pdfOpen");
-  if(ph){ ph.style.display="flex"; ph.querySelector("a").href=url; }
+  const viewer=$("#pdfViewer");
+  viewer.innerHTML="";
+  viewer.style.display="block";
+  try{
+    const pdf=await pdfjsLib.getDocument(url).promise;
+    for(let i=1;i<=pdf.numPages;i++){
+      const page=await pdf.getPage(i);
+      const baseVp=page.getViewport({scale:1});
+      const scale=(viewer.clientWidth-24)/baseVp.width;
+      const vp=page.getViewport({scale});
+      const canvas=document.createElement("canvas");
+      canvas.width=vp.width;canvas.height=vp.height;
+      viewer.appendChild(canvas);
+      await page.render({canvasContext:canvas.getContext("2d"),viewport:vp}).promise;
+    }
+  }catch(e){
+    viewer.innerHTML=`<div style="color:#a3331b;padding:16px">Erro ao renderizar PDF: ${e.message}</div>`;
+  }
 }
 
 /* endpoint do servidor; cai pra valor salvo se SERVER_URL estiver vazio */
@@ -946,7 +941,7 @@ async function switchProject(proj,skipSave){
   if(!skipSave && currentProject && dirty){ try{await persistEverything();}catch(_){}}
   lastPdfBlob=null;
   if(lastPdfUrl){try{URL.revokeObjectURL(lastPdfUrl);}catch(_){}lastPdfUrl=null;}
-  $("#pdfframe").style.display="none";
+  const _v=$("#pdfViewer");_v.style.display="none";_v.innerHTML="";
   $("#previewPh").style.display="";
   $("#btnDownload").disabled=true;
   currentProject=proj;
@@ -1288,7 +1283,7 @@ function toggleCollapse(side){
   const on=!cols.classList.contains(side+"-collapsed");
   cols.classList.toggle(side+"-collapsed",on);
   try{metaSet("collapse_"+side,on?"1":"");}catch(_){}
-  setTimeout(()=>{try{cm.refresh();}catch(_){}},210);
+  setTimeout(()=>{try{cm.refresh();}catch(_){}if(lastPdfBlob)showPdfBlob(lastPdfBlob);},210);
 }
 $("#filesEdge").onclick=()=>toggleCollapse("files");
 $("#previewEdge").onclick=()=>toggleCollapse("preview");
@@ -1359,6 +1354,7 @@ window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.return
       }
       positionHandles();
       cm.refresh();
+      if(lastPdfBlob)showPdfBlob(lastPdfBlob);
     }
     function onUp(){
       handle.classList.remove("dragging");
