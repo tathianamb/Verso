@@ -197,6 +197,10 @@
   .fitem.binary{opacity:.78}
   .fitem.binary small{color:#6f968c;font-style:italic}
   .fitem small{margin-left:auto;color:#8fb3ab;font-size:10px}
+  .fitem .del-btn{display:none;background:none;border:none;color:#f5a96e;cursor:pointer;padding:0 2px;font-size:13px;line-height:1;flex-shrink:0}
+  .fitem .del-btn.solo{margin-left:auto}
+  .fitem:hover .del-btn{display:inline}
+  .fitem.active .del-btn{display:inline}
 
   /* ---------- editor header ---------- */
   .ed-head{
@@ -603,6 +607,7 @@ function buildTree(){
     const el=document.createElement("div");
     el.className="fitem"+(p===current?" active":"")+(missing?" missing":"")+(bin?" binary":"");
     const ic=fileIcon(p,missing);
+    const hasSmall=missing||bin;
     el.innerHTML=`<span class="ic">${ic}</span><span>${basename(p)}</span>`+
       (missing?`<small>ausente</small>`:(bin?`<small>recurso</small>`:``));
     el.onclick=()=>{
@@ -610,6 +615,12 @@ function buildTree(){
       if(missing){ if(confirm(`Criar ${p}? Um \\input aponta para ele, mas o arquivo não existe.`)){ files[p]="% "+p+"\n"; openFile(p); buildTree(); setDirty(true);} return;}
       openFile(p);
     };
+    const delBtn=document.createElement("button");
+    delBtn.className="del-btn"+(hasSmall?"":" solo");
+    delBtn.title="Remover arquivo";
+    delBtn.textContent="🗑";
+    delBtn.onclick=(e)=>{e.stopPropagation();deleteFile(p);};
+    el.appendChild(delBtn);
     tree.appendChild(el);
   };
 
@@ -620,6 +631,14 @@ function buildTree(){
     g.textContent=folder===ROOT?"raiz":folder+"/";
     tree.appendChild(g);
     groups[folder].sort().forEach(addItem);
+  }
+  if(lastPdfBlob){
+    const pdfLabel=pdfName();
+    const pdfEl=document.createElement("div");
+    pdfEl.className="fitem binary";
+    pdfEl.innerHTML=`<span class="ic">📄</span><span>${pdfLabel}</span><small>PDF</small>`;
+    pdfEl.onclick=()=>showPdfBlob(lastPdfBlob);
+    tree.appendChild(pdfEl);
   }
 }
 function openFile(p){
@@ -646,6 +665,25 @@ async function saveAll(){
   await persistEverything();
   setDirty(false);toast("Salvo no dispositivo");
 }
+async function loadSavedPdf(){
+  try{
+    const buf=await dbGet("__pdf_blob");
+    if(!buf)return;
+    lastPdfBlob=new Blob([buf],{type:"application/pdf"});
+    showPdfBlob(lastPdfBlob);
+    $("#btnDownload").disabled=false;
+  }catch(_){}
+}
+async function deleteFile(p){
+  const isBin=!(p in files);
+  if(!confirm(`Remover "${basename(p)}"? Esta ação não pode ser desfeita.`))return;
+  if(isBin)delete binaries[p];else delete files[p];
+  if(current===p){current=null;cm.setValue("");$("#crumb").innerHTML="—";}
+  await persistEverything();
+  rescanReferenced();
+  setDirty(true);
+  toast("Arquivo removido");
+}
 async function load(){
   // aponta o DB pro projeto atual (ou default se nenhum)
   setProjectDb(currentProject?currentProject.repo:"default");
@@ -660,6 +698,7 @@ async function load(){
   }
   rescanReferenced();buildTree();
   openFile(rootTex||Object.keys(files)[0]);
+  await loadSavedPdf();
   updateProjectUI();
 }
 
@@ -690,8 +729,6 @@ function preflight(){
   }
   return missing.length===0;
 }
-
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 function notify(title,body){
   if(!("Notification"in window))return;
@@ -775,6 +812,8 @@ async function compileOnly(){
     lastPdfBlob=blob;
     $("#btnDownload").disabled=false;
     showPdfBlob(blob);
+    blob.arrayBuffer().then(buf=>dbSet("__pdf_blob",buf)).catch(()=>{});
+    buildTree();
     logLine("PDF compilado e carregado no preview. ✓","ok");
     notify("PDF pronto ✓","Compilação concluída.");
     toast("PDF pronto");
@@ -789,7 +828,7 @@ async function compileOnly(){
 /* ---------- 7a-b. BAIXAR o PDF do preview ---------- */
 function downloadPdf(){
   if(!lastPdfBlob){toast("Compile o PDF primeiro");return;}
-  const name=(rootTex?rootTex.replace(/\.tex$/,"").split("/").pop():"documento")+".pdf";
+  const name=pdfName();
   const a=document.createElement("a");
   a.href=URL.createObjectURL(lastPdfBlob);a.download=name;a.click();
   toast("Baixando "+name);
@@ -810,10 +849,9 @@ async function pushToGitHub(){
     });
     const j=await r.json().catch(()=>({}));
     if(!r.ok && !j.source){throw new Error(j.error||("HTTP "+r.status));}
-    if(j.source==="ok")logLine("Fonte versionada no GitHub. ✓","ok");
-    else logLine("Push da fonte: "+(j.source||"sem status"), j.source==="ok"?"ok":"warn");
-    if(j.pdf==="ok")logLine("PDF publicado na gh-pages. ✓","ok");
-    else if(j.pdf)logLine("PDF: "+j.pdf, j.pdf==="ok"?"ok":"warn");
+    if(j.source==="ok")logLine("Fonte e PDF versionados no GitHub. ✓","ok");
+    else logLine("Push: "+(j.source||"sem status"), j.source==="ok"?"ok":"warn");
+    if(j.pdf&&j.pdf!=="ok")logLine("PDF: "+j.pdf,"warn");
     if(j.source==="ok"){ savePushSnapshot(); await syncBaseAfterPush(); }   // guarda estado + atualiza base compartilhada
     notify("Enviado ao GitHub","Fonte e PDF versionados.");
     toast("Enviado ao GitHub");
@@ -842,10 +880,20 @@ async function pullFromGitHub(){
     const j=await r.json();
     if(!j.files||!Object.keys(j.files).length)throw new Error("nenhum arquivo retornado");
     files=j.files;binaries=j.binaries||{};
+    // detecta PDF retornado no pull e exibe sem recompilar
+    const pulledPdf=Object.keys(binaries).find(p=>p.endsWith(".pdf"));
+    if(pulledPdf){
+      const bytes=Uint8Array.from(atob(binaries[pulledPdf]),c=>c.charCodeAt(0));
+      lastPdfBlob=new Blob([bytes],{type:"application/pdf"});
+      lastPdfBlob.arrayBuffer().then(buf=>dbSet("__pdf_blob",buf)).catch(()=>{});
+      delete binaries[pulledPdf];
+    }
     await persistEverything();rescanReferenced();
     openFile(rootTex||Object.keys(files)[0]);
+    if(pulledPdf){showPdfBlob(lastPdfBlob);$("#btnDownload").disabled=false;buildTree();}
     setDirty(false);
     logLine("Projeto carregado do GitHub. ✓","ok");
+    if(pulledPdf)logLine("PDF carregado do repositório. ✓","ok");
     toast(Object.keys(files).length+" arquivos + "+Object.keys(binaries).length+" recursos");
   }catch(e){
     logLine("Falha ao puxar do GitHub: "+e.message,"err");
@@ -888,6 +936,11 @@ async function addProject(){
 async function switchProject(proj,skipSave){
   if(!proj)return;
   if(!skipSave && currentProject && dirty){ try{await persistEverything();}catch(_){}}
+  lastPdfBlob=null;
+  if(lastPdfUrl){try{URL.revokeObjectURL(lastPdfUrl);}catch(_){}lastPdfUrl=null;}
+  $("#pdfframe").style.display="none";
+  $("#previewPh").style.display="";
+  $("#btnDownload").disabled=true;
   currentProject=proj;
   await saveProjects();
   await load();                       // load() já aponta o DB pro projeto certo
